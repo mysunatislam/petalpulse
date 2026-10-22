@@ -16,9 +16,11 @@ Everything the person logs: periods, symptoms, moods, journal text, pain, chats 
 | Cycle day and phase estimate | Only if "Use my cycle context" is on | Same |
 | Recent moods and pain logs | Only if "Use my mood and pain context" is on | Same |
 | Earlier messages | Only if "Petal remembers our chats" is on | Same |
+| Speech, while the mic button is on | Only if the phone can't recognise the language offline **and** the person turned on "Allow online speech recognition" | The phone's own speech service (usually Google). Never to the Petal backend. The app records and keeps no audio |
+| A random install token | When cloud AI is first used with a server address | The Petal backend, to rate-limit and revoke one install. It contains no name, email, device id or health data |
 | A PDF health summary or JSON export | Only when the person taps Share or Export | Wherever they choose to send it |
 
-Cloud AI is **off by default**. Turning off Petal AI also revokes cloud consent. Without any cloud consent, Petal answers with an on-device companion and nothing is sent.
+Cloud AI is **off by default**. Turning off Petal AI also revokes cloud consent. Voice input is on-device by default: Android's offline recognition is used whenever the language pack is installed. Without any cloud consent, Petal answers with an on-device companion and nothing is sent.
 
 ## Lock
 
@@ -36,7 +38,9 @@ Off until the person turns them on. Three wording styles: gentle, discreet (neve
 
 ## Young users
 
-Onboarding asks for an age range. Under-18s are identified (`isMinor`) so extra protections can be applied. See [STATUS.md](STATUS.md): parental-consent flows for cloud AI are not built yet, and cloud AI should stay unavailable to minors until they are.
+Onboarding asks for an age range. If someone says they are under 18, cloud AI cannot be switched on from Settings. Instead, the switch opens a **parent or guardian step** (`src/app/guardian.tsx`) that explains in plain words what cloud AI shares, and asks for the guardian's name, their relation and a confirmation. The agreement (name, relation, date) is stored only on the phone, shown in Settings, and can be withdrawn at any time, which turns cloud AI off straight away.
+
+The check runs again every time a message is sent (`cloudAllowed`), so changing the age range later also pauses cloud AI until a guardian agrees. This is an in-app agreement, not verified identity. If the app is offered to under-13s anywhere, check local law (for example COPPA in the US) before launch.
 
 ## Before release
 

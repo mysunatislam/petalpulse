@@ -1,5 +1,5 @@
 // Renders the app icon, adaptive icon layers, splash and favicon from the Petal Compass.
-// Run: npx -y playwright-core@1 (or any Chromium) — set CHROME to a Chromium path, then node scripts/make-icons.mjs
+// Needs playwright-core and a Chromium build: CHROME=/path/to/chrome node scripts/make-icons.mjs
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 const OUT = new URL('../assets', import.meta.url).pathname;

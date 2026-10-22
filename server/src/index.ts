@@ -10,23 +10,27 @@ import http from 'node:http';
 import Anthropic from '@anthropic-ai/sdk';
 import { screenText, guardOutput, CRISIS_MESSAGE, URGENT_MEDICAL_MESSAGE } from '../../src/engines/safety.ts';
 import { SYSTEM_PROMPT, renderContext, type CompanionRequest } from './prompt.ts';
+import { bearer, createLimiter, issueToken, verifyToken } from './auth.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
-const APP_TOKEN = process.env.PETAL_APP_TOKEN ?? ''; // optional shared token issued to app builds
+const TOKEN_SECRET = process.env.PETAL_TOKEN_SECRET ?? ''; // signs per-install tokens; without it the server runs open (local dev only)
+const REVOKED = new Set((process.env.PETAL_REVOKED_INSTALLS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
 const MODEL = process.env.PETAL_MODEL ?? 'claude-opus-5-5';
 const MAX_BODY = 32 * 1024;
-const RATE = { windowMs: 60_000, max: 20 };
+
+if (!TOKEN_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('PETAL_TOKEN_SECRET is required in production.');
+  process.exit(1);
+}
+if (TOKEN_SECRET && TOKEN_SECRET.length < 32) {
+  console.error('PETAL_TOKEN_SECRET must be at least 32 characters.');
+  process.exit(1);
+}
 
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY from the environment
-const hits = new Map<string, number[]>();
-
-function limited(ip: string): boolean {
-  const now = Date.now();
-  const arr = (hits.get(ip) ?? []).filter((t) => now - t < RATE.windowMs);
-  arr.push(now);
-  hits.set(ip, arr);
-  return arr.length > RATE.max;
-}
+const perMinute = createLimiter(60_000, 20);
+const perDay = createLimiter(24 * 60 * 60_000, 400);
+const registrations = createLimiter(60 * 60_000, 10); // per IP per hour
 
 function send(res: http.ServerResponse, status: number, body: unknown) {
   res.writeHead(status, {
@@ -87,10 +91,23 @@ async function companion(req: CompanionRequest): Promise<{ text: string; safety:
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true });
-  if (req.method !== 'POST' || req.url !== '/v1/companion') return send(res, 404, { error: 'not_found' });
-  if (APP_TOKEN && req.headers.authorization !== `Bearer ${APP_TOKEN}`) return send(res, 401, { error: 'unauthorized' });
   const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0].trim() ?? req.socket.remoteAddress ?? 'unknown';
-  if (limited(ip)) return send(res, 429, { error: 'slow_down' });
+
+  if (req.method === 'POST' && req.url === '/v1/register') {
+    if (!TOKEN_SECRET) return send(res, 200, { token: null }); // open dev server: no token needed
+    if (registrations(ip)) return send(res, 429, { error: 'slow_down' });
+    const { token, expiresAt } = issueToken(TOKEN_SECRET);
+    return send(res, 200, { token, expiresAt });
+  }
+
+  if (req.method !== 'POST' || req.url !== '/v1/companion') return send(res, 404, { error: 'not_found' });
+  let caller = `ip:${ip}`;
+  if (TOKEN_SECRET) {
+    const installId = verifyToken(TOKEN_SECRET, bearer(req.headers.authorization), Date.now(), REVOKED);
+    if (!installId) return send(res, 401, { error: 'unauthorized' });
+    caller = installId;
+  }
+  if (perMinute(caller) || perDay(caller)) return send(res, 429, { error: 'slow_down' });
 
   let size = 0;
   const chunks: Buffer[] = [];
@@ -117,5 +134,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Petal AI backend listening on :${PORT} (model ${MODEL})`);
+  console.log(`Petal AI backend listening on :${PORT} (model ${MODEL}${TOKEN_SECRET ? '' : ', OPEN: no PETAL_TOKEN_SECRET, local dev only'})`);
 });

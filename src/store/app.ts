@@ -16,6 +16,7 @@ import {
   Settings,
 } from '../data/types';
 import { generateDemo } from '../data/demo';
+import { forgetToken } from '../lib/aiToken';
 import { todayISO, ISODate, setDateLanguage } from '../lib/dates';
 
 let factory: () => StorageBackend = createBackend;
@@ -248,7 +249,9 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   async deleteEverything() {
+    const endpoint = get().settings.aiEndpoint;
     await db().wipe();
+    if (endpoint) await forgetToken(endpoint);
     backend = factory(); // fresh backend (and on native a fresh encryption key)
     set({
       profile: DEFAULT_PROFILE,

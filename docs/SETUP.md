@@ -25,7 +25,7 @@ npx expo start --web      # quick browser preview
 
 ### Android development build (recommended)
 
-Petal & Pulse uses native modules that Expo Go does not include, most importantly **SQLCipher** (encrypted SQLite, enabled by `useSQLCipher: true` in `app.json`). You need a development build:
+Petal & Pulse uses native modules that Expo Go does not include, most importantly **SQLCipher** (encrypted SQLite, enabled by `useSQLCipher: true` in `app.json`) and **expo-speech-recognition** for voice input (it adds the microphone permission with its own explanation text). You need a development build:
 
 ```bash
 # Local build (needs Android Studio / SDK)
@@ -46,7 +46,11 @@ Then install the build on the device and run `npx expo start --dev-client`.
 eas build --profile production --platform android   # produces an .aab for Google Play
 ```
 
-Before release, replace the template icons in `assets/` (they are Expo defaults), set a real `android.package` if `com.petalpulse.app` is not yours, and complete the store's Data Safety form using [PRIVACY.md](PRIVACY.md).
+The app icon, adaptive icon layers, monochrome icon, splash and favicon in `assets/` are drawn from the Petal Compass. The sources are SVGs in `assets/brand/`; regenerate the PNGs with `CHROME=/path/to/chrome node scripts/make-icons.mjs` (needs `playwright-core`).
+
+**Voice input.** The mic buttons in Petal AI and the Mood Mirror journal use Android's speech recognition. Offline recognition is used when the language pack is installed on the phone (Settings → System → Languages → On-device speech recognition, or the Google app's offline speech settings; add Bangla there for offline Bangla). Otherwise the app asks the person to turn on "Allow online speech recognition" first. On the web preview the browser's own speech API is used where available.
+
+Before release, set a real `android.package` if `com.petalpulse.app` is not yours, and complete the store's Data Safety form using [PRIVACY.md](PRIVACY.md).
 
 ## Tests
 
@@ -64,6 +68,8 @@ What the 91 tests cover:
 | `__tests__/safety.test.ts` | Pain red flags (emergency, urgent, appointment), worsening trends, crisis and urgent text in English and Bangla, the output guard (no diagnosis, dosing, contraception or human claims), and that `respond()` answers crises without calling the cloud |
 | `__tests__/insights.test.ts` | Demo data shape, each pattern detector, minimum-data rules, correlation maths, meal filtering, the offline companion's replies |
 | `__tests__/privacy.test.ts` | Consent defaults, consent-filtered AI context, revoking consent, memory off clears chat, export excludes the AI endpoint, delete-everything, schema mapping, PIN rules, quiet hours, discreet notification wording |
+| `__tests__/i18n.test.ts` | The Bangla phrasebook, patterns and lists, and that safety messages, phase copy and comfort ideas all have Bangla |
+| `__tests__/voice-auth-guardian.test.ts` | Voice input never goes online without permission, server install tokens (tampering, expiry, revocation, limits), the app's bearer header and 401 retry, and the guardian step for under-18s |
 | `__tests__/a11y.test.tsx` | WCAG AA colour contrast, labelled pain scale, mood radios, the body map's non-visual alternative, toggle and button states |
 
 ## Petal AI backend
@@ -83,16 +89,20 @@ Environment variables:
 | `ANTHROPIC_API_KEY` | (required) | Claude API key. Keep it in your host's secret store. |
 | `PORT` | `8787` | Port to listen on |
 | `PETAL_MODEL` | `claude-opus-5-5` | Model id |
-| `PETAL_APP_TOKEN` | (empty) | Optional shared bearer token. It only deters casual misuse, since anything shipped in an app can be extracted. Use real auth (e.g. per-install tokens or Play Integrity) before launch. |
+| `PETAL_TOKEN_SECRET` | (empty) | Signs per-install tokens. At least 32 random characters (`openssl rand -base64 48`). **Required when `NODE_ENV=production`**; without it the server runs open, for local development only. |
+| `PETAL_REVOKED_INSTALLS` | (empty) | Comma-separated install ids to block |
 
 The server uses **server-side fallback** (`fallbacks: 'default'`), which means that if the primary model is overloaded the API can answer with a fallback model instead of failing. Remove those two lines in `server/src/index.ts` if you always want the primary model.
 
-Endpoints: `GET /health` and `POST /v1/companion`. Deploy behind HTTPS (Fly.io, Render, Cloud Run or similar). Then, in the app, go to **Settings → Petal AI**, turn on cloud replies (which asks for consent) and enter the server address.
+Endpoints: `GET /health`, `POST /v1/register` and `POST /v1/companion`.
+
+**Per-install tokens.** The first time the app uses cloud AI it calls `/v1/register` and gets an HMAC-signed token tied to a random install id. The token lives in the Android Keystore (SecureStore) and goes with every `/v1/companion` call as `Authorization: Bearer …`. Each install is limited to 20 messages a minute and 400 a day, registration to 10 per IP per hour, and tokens last 90 days (the app re-registers on a 401). Tokens carry nothing about the person. They don't prove the caller is the genuine app; before a public launch, add [Play Integrity](https://developer.android.com/google/play/integrity) checks to `/v1/register`. Deploy behind HTTPS (Fly.io, Render, Cloud Run or similar). Then, in the app, go to **Settings → Petal AI**, turn on cloud replies (which asks for consent) and enter the server address.
 
 Quick check:
 
 ```bash
 curl -s localhost:8787/health
-curl -s localhost:8787/v1/companion -H 'content-type: application/json' \
+TOKEN=$(curl -s -X POST localhost:8787/v1/register | node -pe 'JSON.parse(require("fs").readFileSync(0)).token')
+curl -s localhost:8787/v1/companion -H 'content-type: application/json' -H "authorization: Bearer $TOKEN" \
   -d '{"message":"I feel so tired today","history":[],"context":{"language":"en"},"length":"short"}'
 ```
