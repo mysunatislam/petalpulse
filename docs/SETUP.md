@@ -50,6 +50,12 @@ The app icon, adaptive icon layers, monochrome icon, splash and favicon in `asse
 
 **Voice input.** The mic buttons in Petal AI and the Mood Mirror journal use Android's speech recognition. Offline recognition is used when the language pack is installed on the phone (Settings → System → Languages → On-device speech recognition, or the Google app's offline speech settings; add Bangla there for offline Bangla). Otherwise the app asks the person to turn on "Allow online speech recognition" first. On the web preview the browser's own speech API is used where available.
 
+**Wearables (Health Connect).** `react-native-health-connect` and its config plugin are in `app.json`, together with `expo-build-properties` (minSdk 26, compile and target SDK 36) and the five read-only Health Connect permissions. It needs a development build. On Android 14 and newer Health Connect is part of the system; on Android 9 to 13 install the Health Connect app from the Play Store. To test without a watch, add sample data in Health Connect (or a fitness app that writes to it) and tap **Sync now** in Settings → More tools → Wearables. Before a Play Store release, complete Google's Health Connect declaration form.
+
+**Opt-in research.** The research screen stays closed until a study address is built in: set `EXPO_PUBLIC_RESEARCH_URL=https://your-study-server` when building. On the server, set `PETAL_RESEARCH_DIR` (see below). Only do this once the study has ethics approval.
+
+**Clinician review packet.** `npm run review:packet` writes `docs/review/REVIEW_PACKET.md` with every Learn guide, its sources and the hash a clinician signs off against (see [SAFETY.md](SAFETY.md)).
+
 Before release, set a real `android.package` if `com.petalpulse.app` is not yours, and complete the store's Data Safety form using [PRIVACY.md](PRIVACY.md).
 
 ## Tests
@@ -60,7 +66,7 @@ npm run typecheck    # tsc --noEmit
 npx eslint .         # lint
 ```
 
-What the 162 tests cover:
+What the 201 tests cover:
 
 | File | Covers |
 | --- | --- |
@@ -71,6 +77,7 @@ What the 162 tests cover:
 | `__tests__/i18n.test.ts` | The Bangla phrasebook, patterns and lists, and that safety messages, phase copy and comfort ideas all have Bangla |
 | `__tests__/voice-auth-guardian.test.ts` | Voice input never goes online without permission, server install tokens (tampering, expiry, revocation, limits), the app's bearer header and 401 retry, and the guardian step for under-18s |
 | `__tests__/stage2.test.ts` | Multi-cycle patterns (variation, shifts, long periods, recurring symptoms, rising pain), the Mood Mirror, the learning Comfort Path, nutrition by phase and symptoms, the six-month view and PDF section, Bangla and Banglish conversation (including Banglish crisis messages), and Bangla for all new text |
+| `__tests__/stage3.test.ts` | Wearable summaries (sleep date, plausibility, chosen metrics only, pruning, sync window) and patterns, the temperature shift rule and Prediction Lab back-testing without peeking ahead, research eligibility, consent, the strict schema, randomised response, no dates or text in contributions, the research store's delete keys and the client sending no token, Learn guides (sources, Bangla, review status tied to the text), high-contrast AAA contrast, database v2, and the store's wearable and export behaviour |
 | `__tests__/a11y.test.tsx` | WCAG AA colour contrast, labelled pain scale, mood radios, the body map's non-visual alternative, toggle and button states |
 
 ## Petal AI backend
@@ -92,10 +99,11 @@ Environment variables:
 | `PETAL_MODEL` | `claude-opus-5-5` | Model id |
 | `PETAL_TOKEN_SECRET` | (empty) | Signs per-install tokens. At least 32 random characters (`openssl rand -base64 48`). **Required when `NODE_ENV=production`**; without it the server runs open, for local development only. |
 | `PETAL_REVOKED_INSTALLS` | (empty) | Comma-separated install ids to block |
+| `PETAL_RESEARCH_DIR` | (empty) | Folder for opt-in research contributions (one JSON file each). Empty means the research endpoints answer 404. |
 
 The server uses **server-side fallback** (`fallbacks: 'default'`), which means that if the primary model is overloaded the API can answer with a fallback model instead of failing. Remove those two lines in `server/src/index.ts` if you always want the primary model.
 
-Endpoints: `GET /health`, `POST /v1/register` and `POST /v1/companion`.
+Endpoints: `GET /health`, `POST /v1/register`, `POST /v1/companion`, and when research is on, `POST /v1/research` and `DELETE /v1/research/:id` (with an `X-Delete-Key` header). Research endpoints take no token on purpose, so contributions can't be linked to an install; they are limited to 5 per IP a day (in memory only) and store only the day of arrival.
 
 **Per-install tokens.** The first time the app uses cloud AI it calls `/v1/register` and gets an HMAC-signed token tied to a random install id. The token lives in the Android Keystore (SecureStore) and goes with every `/v1/companion` call as `Authorization: Bearer …`. Each install is limited to 20 messages a minute and 400 a day, registration to 10 per IP per hour, and tokens last 90 days (the app re-registers on a 401). Tokens carry nothing about the person. They don't prove the caller is the genuine app; before a public launch, add [Play Integrity](https://developer.android.com/google/play/integrity) checks to `/v1/register`. Deploy behind HTTPS (Fly.io, Render, Cloud Run or similar). Then, in the app, go to **Settings → Petal AI**, turn on cloud replies (which asks for consent) and enter the server address.
 

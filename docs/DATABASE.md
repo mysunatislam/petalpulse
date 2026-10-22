@@ -1,6 +1,6 @@
 # Database schema
 
-The schema is declared once in `src/data/schema.ts` (`TABLES`) and used both to create SQLite tables and to map rows to typed objects. `SCHEMA_VERSION = 1`.
+The schema is declared once in `src/data/schema.ts` (`TABLES`) and used both to create SQLite tables and to map rows to typed objects. `SCHEMA_VERSION = 2`.
 
 On Android the database is an **SQLCipher-encrypted** SQLite file. Column type `json` is stored as TEXT and parsed on read; `bool` is stored as INTEGER 0/1. All dates are ISO `YYYY-MM-DD` strings in the user's local calendar, and timestamps are ISO 8601.
 
@@ -14,6 +14,7 @@ On Android the database is an **SQLCipher-encrypted** SQLite file. Column type `
 | `chat_messages` | `id` | `createdAt`, `role`, `text`, `safety`, `suggestions` (json) | Stored only while "Petal remembers our chats" is on. Turning it off deletes them. |
 | `insight_feedback` | `id` | `status` (helpful, dismissed), `updatedAt` | The person's response to each Pattern Garden insight. |
 | `favorites` | `id` | `createdAt` | Saved meals and comfort ideas. |
+| `wearable_days` | `date` | `sleepMinutes`, `steps`, `restingHr`, `tempDelta`, `bbt`, `source` (health_connect, demo) | Added in v2. One summarised row per day from Health Connect, only for the metrics the person chose. Raw readings are never stored. |
 
 ## Derived data (not stored)
 
@@ -21,9 +22,9 @@ Periods, cycle lengths, predictions, phases, confidence, insights and the pain s
 
 ## Migrations
 
-There is one schema version so far. To add a column, add it to `TABLES`, bump `SCHEMA_VERSION`, and add an `ALTER TABLE` step keyed on the old version in `backend.native.ts` (not written yet, since nothing needs migrating).
+New tables are created automatically on every start (`CREATE TABLE IF NOT EXISTS`). Changes to existing tables go in `MIGRATIONS` in `schema.ts`, keyed by the version they upgrade to. On start, `backend.native.ts` reads the stored `schema_version`, runs `migrationsFrom(stored)` in one transaction, and records the new version. v2 added `wearable_days` and needed no column changes, so its step list is empty. To add a column: add it to `TABLES`, bump `SCHEMA_VERSION`, and add `MIGRATIONS[n] = ['ALTER TABLE … ADD COLUMN …']`.
 
 ## Export and deletion
 
-- **Export** (Settings → Your data) writes every table and the profile/settings to a JSON file, without the AI endpoint address.
+- **Export** (Settings → Your data) writes every table and the profile/settings to a JSON file, without the AI endpoint address or research delete keys.
 - **Delete everything** closes the database, deletes the file and its encryption key, clears secure storage (PIN), and returns to the welcome screen.

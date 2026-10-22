@@ -29,7 +29,7 @@ function PetalTabBar({ state, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]} pointerEvents="box-none">
-      <View style={[styles.bar, { backgroundColor: t.dark ? 'rgba(44,33,48,0.96)' : 'rgba(255,255,255,0.95)', borderColor: t.border, shadowColor: t.shadow }]} accessibilityRole="tablist">
+      <View style={[styles.bar, { backgroundColor: t.hc ? t.surface : t.dark ? 'rgba(44,33,48,0.96)' : 'rgba(255,255,255,0.95)', borderColor: t.border, borderWidth: t.hc ? 1.5 : undefined, shadowColor: t.shadow }]} accessibilityRole="tablist">
         {state.routes.map((route, i) => {
           const focused = state.index === i;
           const color = focused ? t.accentText : t.textMuted;

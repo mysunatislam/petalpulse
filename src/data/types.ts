@@ -61,6 +61,8 @@ export type CareMode = 'everyday' | 'comfort' | 'quiet' | 'reflection';
 export type DietPref = 'none' | 'vegetarian' | 'vegan' | 'pescatarian' | 'halal';
 export type Allergy = 'nuts' | 'dairy' | 'eggs' | 'gluten' | 'fish' | 'soy';
 export type ThemePref = 'system' | 'light' | 'dark';
+export type TextScale = 1 | 1.15 | 1.3 | 1.5;
+export type WearableMetric = 'sleep' | 'steps' | 'restingHr' | 'temperature';
 
 /** Situations that make calendar-based phase estimates unreliable. */
 export type PredictionCaveat =
@@ -115,6 +117,24 @@ export interface Settings {
   voiceAllowNetwork: boolean;
   /** Under-18s need a parent or guardian's agreement before cloud AI can be turned on. */
   guardianConsent: { name: string; relation: string; at: string } | null;
+  /** Accessibility: extra text size on top of the phone's setting, stronger colours, bigger touch areas. */
+  textScale: TextScale;
+  highContrast: boolean;
+  largeTargets: boolean;
+  /** Wearables via Health Connect: read only, each metric opted into separately. */
+  wearables: { enabled: boolean; metrics: WearableMetric[]; lastSync: string | null };
+  /** Prediction Lab: shows experimental estimates next to the standard one. */
+  predictionLab: boolean;
+  /** Opt-in research: off by default, adults only, consent tied to a consent text version. */
+  research: { consentVersion: number | null; consentedAt: string | null; receipts: ResearchReceipt[] };
+}
+
+export interface ResearchReceipt {
+  id: string;
+  /** Lets this phone ask the server to delete the contribution later. Never sent with the data. */
+  deleteKey: string;
+  sentAt: string;
+  endpoint: string;
 }
 
 export interface PeriodDay {
@@ -178,6 +198,19 @@ export interface InsightFeedback {
   updatedAt: string;
 }
 
+/** One day of wearable data, summarised on the phone. Raw readings are never stored. */
+export interface WearableDay {
+  date: ISODate;
+  sleepMinutes: number | null;
+  steps: number | null;
+  restingHr: number | null;
+  /** Night-time skin temperature difference from the device's baseline, °C. */
+  tempDelta: number | null;
+  /** Basal body temperature from a thermometer app, °C. */
+  bbt: number | null;
+  source: 'health_connect' | 'demo';
+}
+
 export interface Favorite {
   id: string; // meal id
   createdAt: string;
@@ -224,6 +257,12 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceAllowNetwork: false,
   guardianConsent: null,
   appLock: 'off',
+  textScale: 1,
+  highContrast: false,
+  largeTargets: false,
+  wearables: { enabled: false, metrics: [], lastSync: null },
+  predictionLab: false,
+  research: { consentVersion: null, consentedAt: null, receipts: [] },
 };
 
 export const EMPTY_DAY_LOG = (date: ISODate): DayLog => ({

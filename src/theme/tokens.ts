@@ -12,6 +12,8 @@ export const palette = {
 
 export interface Theme {
   dark: boolean;
+  /** High-contrast variant: stronger text, solid surfaces, visible borders. */
+  hc: boolean;
   bg: string;
   bgAlt: string;
   surface: string;
@@ -39,6 +41,7 @@ export interface Theme {
 
 export const light: Theme = {
   dark: false,
+  hc: false,
   bg: palette.ivory,
   bgAlt: '#FBF1F3',
   surface: '#FFFFFF',
@@ -66,6 +69,7 @@ export const light: Theme = {
 
 export const dark: Theme = {
   dark: true,
+  hc: false,
   bg: '#1E1620',
   bgAlt: '#261C29',
   surface: '#2C2130',
@@ -89,6 +93,55 @@ export const dark: Theme = {
   gradient: ['#1E1620', '#2A1D2C', '#2B2238'],
   heroGradient: ['#2C2030', '#2A2337'],
   shadow: 'rgba(0,0,0,0.4)',
+};
+
+/** High contrast, light: near-black text on white, borders you can see (all text ≥ 10:1). */
+export const hcLight: Theme = {
+  ...light,
+  hc: true,
+  bg: '#FFFFFF',
+  bgAlt: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceGlass: '#FFFFFF',
+  border: '#5A4A5C',
+  text: '#1A0F1C',
+  textMuted: '#2E2230',
+  textSoft: '#3D2F40',
+  primary: '#8C4462',
+  primaryText: '#6B2445',
+  accent: '#2A1A2C',
+  lavender: '#F1ECFB',
+  peach: '#FFEDE4',
+  sage: '#E6F0E6',
+  blush: '#FBEAF0',
+  danger: '#8A1530',
+  warn: '#6B4500',
+  gradient: ['#FFFFFF', '#FFFFFF', '#FFFFFF'],
+  heroGradient: ['#FFFFFF', '#FFFFFF'],
+};
+
+/** High contrast, dark: white text on black. */
+export const hcDark: Theme = {
+  ...dark,
+  hc: true,
+  bg: '#000000',
+  bgAlt: '#000000',
+  surface: '#121012',
+  surfaceGlass: '#121012',
+  border: '#CDB8CC',
+  text: '#FFFFFF',
+  textMuted: '#F2E9F0',
+  textSoft: '#E4D6E2',
+  primary: '#FFB8CF',
+  primaryText: '#FFC9DA',
+  accent: '#FFFFFF',
+  accentText: '#000000',
+  lavender: '#1E1828',
+  peach: '#2A1C18',
+  sage: '#18241B',
+  blush: '#2A1520',
+  gradient: ['#000000', '#000000', '#000000'],
+  heroGradient: ['#121012', '#121012'],
 };
 
 /** Petal Compass petal colours per phase (visual metaphor only). */

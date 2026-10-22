@@ -11,12 +11,15 @@ import Anthropic from '@anthropic-ai/sdk';
 import { screenText, guardOutput, CRISIS_MESSAGE, URGENT_MEDICAL_MESSAGE } from '../../src/engines/safety.ts';
 import { SYSTEM_PROMPT, renderContext, type CompanionRequest } from './prompt.ts';
 import { bearer, createLimiter, issueToken, verifyToken } from './auth.ts';
+import { createResearchStore, parseSubmission } from './research.ts';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const TOKEN_SECRET = process.env.PETAL_TOKEN_SECRET ?? ''; // signs per-install tokens; without it the server runs open (local dev only)
 const REVOKED = new Set((process.env.PETAL_REVOKED_INSTALLS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
 const MODEL = process.env.PETAL_MODEL ?? 'claude-opus-5-5';
 const MAX_BODY = 32 * 1024;
+const RESEARCH_DIR = process.env.PETAL_RESEARCH_DIR ?? ''; // opt-in research is off unless a study sets this
+const research = RESEARCH_DIR ? createResearchStore(RESEARCH_DIR) : null;
 
 if (!TOKEN_SECRET && process.env.NODE_ENV === 'production') {
   console.error('PETAL_TOKEN_SECRET is required in production.');
@@ -31,6 +34,7 @@ const client = new Anthropic(); // reads ANTHROPIC_API_KEY from the environment
 const perMinute = createLimiter(60_000, 20);
 const perDay = createLimiter(24 * 60 * 60_000, 400);
 const registrations = createLimiter(60 * 60_000, 10); // per IP per hour
+const contributions = createLimiter(24 * 60 * 60_000, 5); // per IP per day, held in memory only
 
 function send(res: http.ServerResponse, status: number, body: unknown) {
   res.writeHead(status, {
@@ -89,6 +93,22 @@ async function companion(req: CompanionRequest): Promise<{ text: string; safety:
   return { text: guardOutput(text || 'I’m here. Could you tell me a little more?').text, safety: null };
 }
 
+/** Reads a JSON body up to MAX_BODY. undefined = too large, null = not JSON. */
+async function readJson(req: http.IncomingMessage): Promise<unknown | null | undefined> {
+  let size = 0;
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > MAX_BODY) return undefined;
+    chunks.push(chunk as Buffer);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/health') return send(res, 200, { ok: true });
   const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0].trim() ?? req.socket.remoteAddress ?? 'unknown';
@@ -100,6 +120,24 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { token, expiresAt });
   }
 
+  // Opt-in research: no token on purpose, so a contribution can't be linked to an install.
+  if (req.url === '/v1/research' || req.url?.startsWith('/v1/research/')) {
+    if (!research) return send(res, 404, { error: 'not_found' });
+    if (req.method === 'POST' && req.url === '/v1/research') {
+      if (contributions(ip)) return send(res, 429, { error: 'slow_down' });
+      const body = await readJson(req);
+      if (body === undefined) return send(res, 413, { error: 'too_large' });
+      const sub = parseSubmission(body);
+      if (!sub) return send(res, 400, { error: 'bad_request' });
+      return send(res, 200, { id: await research.save(sub.contribution, sub.deleteKeyHash) });
+    }
+    if (req.method === 'DELETE') {
+      const r = await research.remove(req.url.slice('/v1/research/'.length), req.headers['x-delete-key'] as string | undefined);
+      return r === 'forbidden' ? send(res, 403, { error: 'forbidden' }) : send(res, r === 'deleted' ? 200 : 404, { deleted: r === 'deleted' });
+    }
+    return send(res, 404, { error: 'not_found' });
+  }
+
   if (req.method !== 'POST' || req.url !== '/v1/companion') return send(res, 404, { error: 'not_found' });
   let caller = `ip:${ip}`;
   if (TOKEN_SECRET) {
@@ -109,19 +147,9 @@ const server = http.createServer(async (req, res) => {
   }
   if (perMinute(caller) || perDay(caller)) return send(res, 429, { error: 'slow_down' });
 
-  let size = 0;
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    size += (chunk as Buffer).length;
-    if (size > MAX_BODY) return send(res, 413, { error: 'too_large' });
-    chunks.push(chunk as Buffer);
-  }
-  let body: CompanionRequest | null = null;
-  try {
-    body = validate(JSON.parse(Buffer.concat(chunks).toString('utf8')));
-  } catch {
-    body = null;
-  }
+  const raw = await readJson(req);
+  if (raw === undefined) return send(res, 413, { error: 'too_large' });
+  const body = validate(raw);
   if (!body) return send(res, 400, { error: 'bad_request' });
 
   try {
@@ -134,5 +162,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Petal AI backend listening on :${PORT} (model ${MODEL}${TOKEN_SECRET ? '' : ', OPEN: no PETAL_TOKEN_SECRET, local dev only'})`);
+  console.log(`Petal AI backend listening on :${PORT} (model ${MODEL}${TOKEN_SECRET ? '' : ', OPEN: no PETAL_TOKEN_SECRET, local dev only'}${research ? ', research on' : ''})`);
 });

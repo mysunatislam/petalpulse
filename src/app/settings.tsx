@@ -117,11 +117,29 @@ export default function SettingsScreen() {
         <T v="label">Appearance</T>
         <Gap h={6} />
         <Segmented options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} value={settings.theme} onChange={(v) => upd({ theme: v })} />
+        <Gap h={14} />
+        <T v="label">Text size</T>
+        <Gap h={6} />
+        <Segmented
+          options={[{ value: '1', label: 'Aa' }, { value: '1.15', label: 'Aa+' }, { value: '1.3', label: 'Aa++' }, { value: '1.5', label: 'Aa+++' }]}
+          value={String(settings.textScale) as '1' | '1.15' | '1.3' | '1.5'}
+          onChange={(v) => upd({ textScale: Number(v) as Settings['textScale'] })}
+        />
+        <T v="small" soft style={{ marginTop: 6 }}>
+          Added on top of your phone’s font size setting.
+        </T>
+        <Toggle label="High contrast" detail="Darker text, solid backgrounds and clear borders. Switches show On and Off in words." value={settings.highContrast} onChange={(v) => upd({ highContrast: v })} />
+        <Toggle label="Larger touch areas" detail="Makes buttons, chips and switches bigger and easier to tap." value={settings.largeTargets} onChange={(v) => upd({ largeTargets: v })} />
         <Toggle label="Reduce motion" detail="Turns off blooming and sliding animations. We also follow your phone’s setting." value={settings.reduceMotion} onChange={(v) => upd({ reduceMotion: v })} />
         <Toggle label="Soft haptics" value={settings.haptics} onChange={(v) => upd({ haptics: v })} />
-        <T v="small" soft>
-          Text size follows your phone’s font size setting.
-        </T>
+      </Card>
+
+      <SectionTitle>More tools</SectionTitle>
+      <Card>
+        <ListItem icon="⌚" title="Wearables" detail={settings.wearables.enabled ? 'Connected through Health Connect' : 'Sleep, steps, heart rate and temperature from Health Connect'} onPress={() => router.push('/wearables')} />
+        <ListItem icon="🧪" title="Prediction Lab" detail={settings.predictionLab ? 'On' : 'Try experimental estimates, scored on your own cycles'} onPress={() => router.push('/lab')} />
+        <ListItem icon="📚" title="Learn" detail="Short guides with sources and review status" onPress={() => router.push('/learn')} />
+        <ListItem icon="🔬" title="Help research" detail={settings.research.consentVersion ? 'Taking part' : 'Off. Opt in to share de-identified summaries'} onPress={() => router.push('/research')} />
       </Card>
 
       {/* Notifications */}
@@ -328,7 +346,7 @@ export default function SettingsScreen() {
       </Card>
       <Gap h={12} />
       <T v="small" soft>
-        Petal & Pulse supports wellbeing and self-understanding. It is not a medical device, does not diagnose, and is not a method of contraception. Version 0.1.0 (Stage 1).
+        Petal & Pulse supports wellbeing and self-understanding. It is not a medical device, does not diagnose, and is not a method of contraception. Version 0.3.0 (Stage 3).
       </T>
     </Screen>
   );

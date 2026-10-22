@@ -14,9 +14,13 @@ import {
   PeriodDay,
   Profile,
   Settings,
+  WearableDay,
+  WearableMetric,
 } from '../data/types';
+import { keepMetrics, mergeWearableDays } from '../engines/wearables';
 import { generateDemo } from '../data/demo';
 import { forgetToken } from '../lib/aiToken';
+import { deleteContribution } from '../lib/research';
 import { todayISO, ISODate, setDateLanguage } from '../lib/dates';
 
 let factory: () => StorageBackend = createBackend;
@@ -44,6 +48,7 @@ export interface AppState {
   chat: ChatMessage[];
   insightFeedback: InsightFeedback[];
   favorites: Favorite[];
+  wearables: WearableDay[];
 
   load(): Promise<void>;
   setUnlocked(v: boolean): void;
@@ -61,6 +66,10 @@ export interface AppState {
   clearChat(): Promise<void>;
   setInsightFeedback(id: string, status: InsightFeedback['status'] | null): Promise<void>;
   toggleFavorite(id: string): Promise<void>;
+  /** Adds or replaces daily wearable summaries and records the sync time. */
+  saveWearables(days: WearableDay[], syncedAt?: string): Promise<void>;
+  /** Drops what was summarised for metrics no longer shared (all of it when given none). */
+  pruneWearables(metrics: WearableMetric[]): Promise<void>;
   loadDemo(): Promise<void>;
   exitDemo(): Promise<void>;
   exportAll(): Record<string, unknown>;
@@ -82,11 +91,12 @@ export const useApp = create<AppState>((set, get) => ({
   chat: [],
   insightFeedback: [],
   favorites: [],
+  wearables: [],
 
   async load() {
     const b = db();
     await b.init();
-    const [profileKV, settingsKV, periodDays, dayLogs, moods, pain, chat, insightFeedback, favorites] = await Promise.all([
+    const [profileKV, settingsKV, periodDays, dayLogs, moods, pain, chat, insightFeedback, favorites, wearables] = await Promise.all([
       b.get<{ key: string; value: Profile }>('kv', 'profile'),
       b.get<{ key: string; value: Settings }>('kv', 'settings'),
       b.all<PeriodDay>('period_days'),
@@ -96,6 +106,7 @@ export const useApp = create<AppState>((set, get) => ({
       b.all<ChatMessage>('chat_messages'),
       b.all<InsightFeedback>('insight_feedback'),
       b.all<Favorite>('favorites'),
+      b.all<WearableDay>('wearable_days'),
     ]);
     const settings = { ...DEFAULT_SETTINGS, ...(settingsKV?.value ?? {}) };
     set({
@@ -111,6 +122,7 @@ export const useApp = create<AppState>((set, get) => ({
       chat: [...chat].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)),
       insightFeedback,
       favorites,
+      wearables: sortByDate(wearables),
     });
   },
 
@@ -208,6 +220,21 @@ export const useApp = create<AppState>((set, get) => ({
     }
   },
 
+  async saveWearables(days, syncedAt) {
+    set({ wearables: mergeWearableDays(get().wearables, days) });
+    if (days.length) await db().putMany('wearable_days', days);
+    if (syncedAt) await get().updateSettings({ wearables: { ...get().settings.wearables, lastSync: syncedAt } });
+  },
+
+  async pruneWearables(metrics) {
+    const before = get().wearables;
+    const kept = keepMetrics(before, metrics);
+    const keptDates = new Set(kept.map((d) => d.date));
+    set({ wearables: kept });
+    for (const d of before) if (!keptDates.has(d.date)) await db().remove('wearable_days', d.date);
+    if (kept.length) await db().putMany('wearable_days', kept);
+  },
+
   async loadDemo() {
     const settings = get().settings;
     await get().deleteEverything();
@@ -218,8 +245,16 @@ export const useApp = create<AppState>((set, get) => ({
     await b.putMany('day_logs', demo.dayLogs);
     await b.putMany('mood_entries', demo.moods);
     await b.putMany('pain_episodes', demo.pain);
+    await b.putMany('wearable_days', demo.wearables);
     await b.put('kv', { key: 'profile', value: demo.profile });
-    const keep = { ...settings, appLock: 'off' as const, careMode: 'everyday' as const };
+    const keep = {
+      ...settings,
+      appLock: 'off' as const,
+      careMode: 'everyday' as const,
+      // The demo shows a connected watch; research stays off because demo data must never be contributed.
+      wearables: { enabled: true, metrics: ['sleep', 'steps', 'restingHr', 'temperature'] as WearableMetric[], lastSync: new Date().toISOString() },
+      research: { consentVersion: null, consentedAt: null, receipts: [] },
+    };
     await b.put('kv', { key: 'settings', value: keep });
     await get().load();
   },
@@ -227,7 +262,14 @@ export const useApp = create<AppState>((set, get) => ({
   async exitDemo() {
     const { settings } = get();
     await get().deleteEverything();
-    await get().updateSettings({ language: settings.language, theme: settings.theme, reduceMotion: settings.reduceMotion });
+    await get().updateSettings({
+      language: settings.language,
+      theme: settings.theme,
+      reduceMotion: settings.reduceMotion,
+      textScale: settings.textScale,
+      highContrast: settings.highContrast,
+      largeTargets: settings.largeTargets,
+    });
   },
 
   exportAll() {
@@ -238,18 +280,22 @@ export const useApp = create<AppState>((set, get) => ({
       format: 'petal-pulse-export/v1',
       isDemoData: s.profile.isDemo,
       profile: s.profile,
-      settings: { ...s.settings, aiEndpoint: undefined },
+      // Research delete keys are left out: they only matter on this phone.
+      settings: { ...s.settings, aiEndpoint: undefined, research: { ...s.settings.research, receipts: undefined } },
       periodDays: s.periodDays,
       dayLogs: s.dayLogs,
       moods: s.moods,
       pain: s.pain,
       chat: s.chat,
       favorites: s.favorites,
+      wearables: s.wearables,
     };
   },
 
   async deleteEverything() {
     const endpoint = get().settings.aiEndpoint;
+    // Ask research to delete what was sent while the delete keys still exist (best effort).
+    for (const r of get().settings.research?.receipts ?? []) await deleteContribution(r).catch(() => false);
     await db().wipe();
     if (endpoint) await forgetToken(endpoint);
     backend = factory(); // fresh backend (and on native a fresh encryption key)
@@ -263,6 +309,7 @@ export const useApp = create<AppState>((set, get) => ({
       chat: [],
       insightFeedback: [],
       favorites: [],
+      wearables: [],
       unlocked: true,
     });
     await db().init();

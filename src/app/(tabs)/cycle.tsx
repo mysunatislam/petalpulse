@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { Button, Card, Gap, Notice, Pill, Row, Screen, SectionTitle, T } from '../../components/ui';
@@ -7,6 +7,7 @@ import { PetalBloom } from '../../components/PetalCompass';
 import { useApp } from '../../store/app';
 import { useCycle, useToday } from '../../store/derived';
 import { buildCycles, PHASE_COPY, predictedDayKind } from '../../engines/cycle';
+import { METHOD_COPY, predictionLab } from '../../engines/prediction';
 import { formatLong, formatRange, formatShort } from '../../lib/dates';
 import { FLOW_COLOR, FLOW_LABEL } from '../../lib/labels';
 import { useTheme } from '../../theme/useTheme';
@@ -23,6 +24,18 @@ export default function CycleScreen() {
   const painDates = new Set(pain.map((p) => p.date));
   const seeded = status.lastPeriod && status.lastPeriod.days.length === 0 ? status.lastPeriod : null;
   const cycles = buildCycles(periods).filter((c) => c.length !== null).slice(-6);
+  const labOn = useApp((s) => s.settings.predictionLab);
+  const dayLogs = useApp((s) => s.dayLogs);
+  const wearOn = useApp((s) => s.settings.wearables.enabled);
+  const wearables = useApp((s) => s.wearables);
+  const lab = useMemo(
+    () => (labOn ? predictionLab({ periods, dayLogs, wearables: wearOn ? wearables : [], today }) : null),
+    [labOn, periods, dayLogs, wearOn, wearables, today],
+  );
+  // The Lab's closest method when it has an estimate this cycle, otherwise the closest one that does.
+  const labPick = lab
+    ? (lab.estimates.find((e) => e.method === lab.best) ?? [...lab.estimates].sort((a, b) => (a.pastError ?? 99) - (b.pastError ?? 99))[0])
+    : undefined;
 
   return (
     <Screen back={false} title="My Cycle" eyebrow="The Cycle Compass">
@@ -88,6 +101,30 @@ export default function CycleScreen() {
           Predictions use your own recorded cycles: the middle value of up to six recent cycles, with a wider window when cycles vary. They are estimates, not certainties.
         </T>
       </Card>
+      {labOn && (
+        <>
+          <Gap h={10} />
+          <Card tint={t.lavender} onPress={() => router.push('/lab')} accessibilityLabel="Prediction Lab">
+            <T v="eyebrow" soft>
+              Prediction Lab · experimental
+            </T>
+            {labPick ? (
+              <>
+                <T v="h3" style={{ marginTop: 4 }}>
+                  {formatRange(labPick.earliest, labPick.latest)}
+                </T>
+                <T v="small" muted>
+                  {labPick.pastError !== null ? `${METHOD_COPY[labPick.method].title} · ± ${labPick.pastError} days on past cycles` : METHOD_COPY[labPick.method].title}
+                </T>
+              </>
+            ) : (
+              <T v="small" muted style={{ marginTop: 4 }}>
+                Not enough data yet to compare methods.
+              </T>
+            )}
+          </Card>
+        </>
+      )}
 
       {cycles.length > 0 && (
         <>

@@ -28,3 +28,11 @@ Tips for a live demo:
 4. **Log pain → Comfort Path.** Gentle warmth comes first with "Helped you … times"; positioning, which Mira often tried but never marked as helping, sinks to the bottom.
 5. **Nourish Me.** The focus card says "iron and warmth" during her period; iron-rich meals show a lemon or guava pairing tip.
 6. **Petal AI in Bangla.** Switch the language to বাংলা and type `amar pet e onek betha` (Banglish) or `আমার পেট খুব ব্যথা করছে।`. Petal answers in Bangla and mentions Mira's cramp pattern in Bangla.
+
+## Stage 3 tour (about two minutes)
+
+1. **Settings → More tools → Wearables.** The demo has a synthetic watch connected for 90 days. Point out "read only", the week at a glance, and the patterns: Mira's resting heart rate is about 2.5 bpm higher in the week before her period, and her more active days have fewer hard check-ins.
+2. **Prediction Lab.** Turn it on. Each method shows its range and how far off it was on Mira's past cycles; the temperature method has been closest (under a day) and explains it will add an estimate once this cycle's rise shows up. Back in **My Cycle**, a Lab line sits under the standard prediction, which is unchanged.
+3. **My Care → Learn.** Eight short guides with sources, each marked "Awaiting clinician review". Open "When to see a doctor" and switch to বাংলা to show the Bangla version.
+4. **Settings → Language & accessibility.** Try text size Aa++, High contrast and Larger touch areas. Switches show On and Off in words, and the tab bar becomes solid.
+5. **Settings → More tools → Help research.** Shows exactly what would and wouldn't be shared, the coin-flip noise, and that demo data can't be contributed.
