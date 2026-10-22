@@ -4,21 +4,21 @@
 
 Petal & Pulse is a menstrual, emotional and wellness companion. It is built Android-first with Expo, and the same code can later ship to iOS. It is local-first: everything a person logs stays encrypted on their phone unless they choose to share it.
 
-This is the **Stage 1 MVP**. See [docs/STATUS.md](docs/STATUS.md) for what is finished and what is not.
+This is the **Stage 1 MVP plus Stage 2 (Advanced Intelligence)**. See [docs/STATUS.md](docs/STATUS.md) for what is finished and what is not.
 
 ## Quick start
 
 ```bash
 npm install
 npx expo start          # press "a" for an Android device/emulator, "w" for the web preview
-npm test                # 120 unit + accessibility tests
+npm test                # 162 unit + accessibility tests
 npm run typecheck
 npx eslint .
 ```
 
 The encrypted database (SQLCipher) and the other native modules need a **development build** on Android, not Expo Go. Details are in [docs/SETUP.md](docs/SETUP.md).
 
-To look around without entering anything, tap **"Explore the demo"** on the welcome screen. It loads three months of synthetic data for a fictional user, Mira, and shows a banner at the top of every screen.
+To look around without entering anything, tap **"Explore the demo"** on the welcome screen. It loads about six months of synthetic data for a fictional user, Mira, and shows a banner at the top of every screen.
 
 ## What's inside
 

@@ -10,8 +10,8 @@ export default function ExportScreen() {
   const today = useToday();
   const { status, periods } = useCycle();
   const s = useApp();
-  const [months, setMonths] = useState<'1' | '3' | '6'>('3');
-  const [opts, setOpts] = useState({ includeCycle: true, includePain: true, includeSymptoms: true, includeMood: false, includeNotes: false });
+  const [months, setMonths] = useState<'1' | '3' | '6' | '12'>('6');
+  const [opts, setOpts] = useState({ includeCycle: true, includePain: true, includeSymptoms: true, includeMood: false, includeNotes: false, includeTrends: true });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const o: ReportOptions = { from: addDays(today, -Number(months) * 30), to: today, ...opts };
@@ -42,6 +42,7 @@ export default function ExportScreen() {
           { value: '1', label: '1 month' },
           { value: '3', label: '3 months' },
           { value: '6', label: '6 months' },
+          { value: '12', label: '12 months' },
         ]}
         value={months}
         onChange={setMonths}
@@ -52,6 +53,7 @@ export default function ExportScreen() {
       <SectionTitle>Include</SectionTitle>
       <Card>
         <Toggle label="Cycle summary" detail={`${preview.cycles.length} cycles`} value={opts.includeCycle} onChange={(v) => setOpts({ ...opts, includeCycle: v })} />
+        <Toggle label="Changes over time" detail="Cycle by cycle and month by month, with patterns" value={opts.includeTrends} onChange={(v) => setOpts({ ...opts, includeTrends: v })} />
         <Toggle label="Pain Passport" detail={`${preview.pain.episodes} pain logs`} value={opts.includePain} onChange={(v) => setOpts({ ...opts, includePain: v })} />
         <Toggle label="Symptoms & sleep" value={opts.includeSymptoms} onChange={(v) => setOpts({ ...opts, includeSymptoms: v })} />
         <Toggle label="Mood check-ins" detail="Counts only, no journal text" value={opts.includeMood} onChange={(v) => setOpts({ ...opts, includeMood: v })} />

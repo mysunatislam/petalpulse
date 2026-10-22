@@ -15,7 +15,7 @@ export default function ComfortPath() {
   const pain = useApp((s) => s.pain);
   const ep = pain.find((p) => p.id === id) ?? pain[pain.length - 1];
   const history = useMemo(() => pain.filter((p) => p.id !== ep?.id), [pain, ep]);
-  const helpedBefore = useMemo(() => [...new Set(history.flatMap((h) => h.helped))], [history]);
+  const learned = useMemo(() => history.some((h) => h.tried.length || h.helped.length), [history]);
 
   if (!ep) {
     return (
@@ -28,7 +28,7 @@ export default function ComfortPath() {
   }
 
   const safety = assessPain(ep, { history, possiblePregnancy: preg === '1' });
-  const ideas = comfortPath(ep, helpedBefore);
+  const ideas = comfortPath(ep, history);
 
   const mark = async (key: string, field: 'tried' | 'helped') => {
     const cur = useApp.getState().pain.find((p) => p.id === ep.id);
@@ -76,7 +76,7 @@ export default function ComfortPath() {
       <SectionTitle>Gentle things you could try</SectionTitle>
       <T v="small" muted style={{ marginBottom: 10 }}>
         These may help you feel more comfortable. They don’t cure pain, and strong or unusual pain deserves medical attention.
-        {helpedBefore.length ? ' Things that helped you before are shown first.' : ''}
+        {learned ? ' Your Comfort Path learns from what you mark, so what has helped with similar pain comes first.' : ''}
       </T>
       <View style={{ gap: 10 }}>
         {ideas.map((c) => {
@@ -91,6 +91,11 @@ export default function ComfortPath() {
                   <T v="small" muted>
                     {c.detail}
                   </T>
+                  {c.note ? (
+                    <T v="small" color={t.primaryText} style={{ marginTop: 4 }}>
+                      {c.note}
+                    </T>
+                  ) : null}
                   <Row style={{ gap: 8, marginTop: 10 }}>
                     <Button small kind={tried ? 'primary' : 'secondary'} title={tried ? '✓ Tried' : 'I tried this'} onPress={() => mark(c.id, 'tried')} />
                     <Button small kind={helped ? 'primary' : 'ghost'} title={helped ? '♥ Helped' : 'It helped'} onPress={() => mark(c.id, 'helped')} />

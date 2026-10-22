@@ -60,7 +60,7 @@ npm run typecheck    # tsc --noEmit
 npx eslint .         # lint
 ```
 
-What the 91 tests cover:
+What the 162 tests cover:
 
 | File | Covers |
 | --- | --- |
@@ -70,6 +70,7 @@ What the 91 tests cover:
 | `__tests__/privacy.test.ts` | Consent defaults, consent-filtered AI context, revoking consent, memory off clears chat, export excludes the AI endpoint, delete-everything, schema mapping, PIN rules, quiet hours, discreet notification wording |
 | `__tests__/i18n.test.ts` | The Bangla phrasebook, patterns and lists, and that safety messages, phase copy and comfort ideas all have Bangla |
 | `__tests__/voice-auth-guardian.test.ts` | Voice input never goes online without permission, server install tokens (tampering, expiry, revocation, limits), the app's bearer header and 401 retry, and the guardian step for under-18s |
+| `__tests__/stage2.test.ts` | Multi-cycle patterns (variation, shifts, long periods, recurring symptoms, rising pain), the Mood Mirror, the learning Comfort Path, nutrition by phase and symptoms, the six-month view and PDF section, Bangla and Banglish conversation (including Banglish crisis messages), and Bangla for all new text |
 | `__tests__/a11y.test.tsx` | WCAG AA colour contrast, labelled pain scale, mood radios, the body map's non-visual alternative, toggle and button states |
 
 ## Petal AI backend

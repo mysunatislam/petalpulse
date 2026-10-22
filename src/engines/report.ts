@@ -6,6 +6,7 @@ import type { DayLog, MoodEntry, PainEpisode, Profile } from '../data/types';
 import type { CycleStatus, Period } from './cycle';
 import { buildCycles } from './cycle';
 import { summarizePain } from './insights';
+import { buildLongitudinal, CycleRow } from './patterns';
 import { formatLong, ISODate } from '../lib/dates';
 import { IMPACT_LABEL, QUALITY_LABEL, SYMPTOM_LABEL } from '../lib/labels';
 
@@ -32,6 +33,29 @@ const COMFORT: Record<string, string> = {
   pharmacist: 'Pain relief (per pharmacist/doctor)',
 };
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const monthLabel = (ym: string) => `${MONTHS[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`;
+
+/** Bars for cycle length with the highest pain marked above each bar. Plain SVG so it prints. */
+function cycleChart(cycles: CycleRow[]): string {
+  const done = cycles.filter((c) => c.length !== null);
+  if (done.length < 2) return '';
+  const w = 520;
+  const h = 150;
+  const bw = Math.min(56, (w - 40) / done.length - 10);
+  const maxLen = Math.max(40, ...done.map((c) => c.length as number));
+  const y = (v: number) => h - 24 - (v / maxLen) * (h - 50);
+  const bars = done
+    .map((c, i) => {
+      const x = 30 + i * (bw + 10);
+      const len = c.length as number;
+      const pain = c.maxPain !== null ? `<text x="${x + bw / 2}" y="${y(len) - 6}" font-size="10" text-anchor="middle" fill="#A33A55">pain ${c.maxPain}</text>` : '';
+      return `<rect x="${x}" y="${y(len)}" width="${bw}" height="${h - 24 - y(len)}" rx="4" fill="#CFA9C9"/><text x="${x + bw / 2}" y="${y(len) + 14}" font-size="10.5" text-anchor="middle" fill="#2E1F30">${len}</text>${pain}<text x="${x + bw / 2}" y="${h - 8}" font-size="9.5" text-anchor="middle" fill="#6E5A70">${esc(c.start.slice(5).replace('-', '/'))}</text>`;
+    })
+    .join('');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Cycle length in days for each cycle, with the highest pain score logged in that cycle"><line x1="24" x2="${w}" y1="${h - 24}" y2="${h - 24}" stroke="#EBD9E1"/>${bars}</svg><div class="muted">Bars: cycle length in days (start date below). Red: highest pain logged in that cycle, 0–10.</div>`;
+}
+
 export interface ReportOptions {
   from: ISODate;
   to: ISODate;
@@ -40,6 +64,8 @@ export interface ReportOptions {
   includeMood: boolean;
   includeSymptoms: boolean;
   includeNotes: boolean;
+  /** Cycle-by-cycle and month-by-month tables, with patterns across cycles. */
+  includeTrends?: boolean;
 }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
@@ -110,6 +136,34 @@ export function buildReportHtml(
     sections.push(`<h2>Mood check-ins</h2><p>${r.moodTotal} check-ins.</p>${list(Object.entries(r.moodCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`))}`);
   }
 
+  if (o.includeTrends) {
+    const lg = buildLongitudinal({ periods: d.periods, dayLogs: d.dayLogs, moods: d.moods, pain: d.pain, from: o.from, to: o.to });
+    const sm = lg.summary;
+    const cell = (v: string | number | null) => `<td>${v === null ? '—' : esc(String(v))}</td>`;
+    const pct = (v: number | null) => (v === null ? null : `${Math.round(v * 100)}%`);
+    const cycleRows = lg.cycles
+      .map(
+        (c) =>
+          `<tr>${cell(formatLong(c.start))}${cell(c.length ?? 'current')}${cell(c.periodLength)}${cell(c.painLogs)}${cell(c.maxPain)}${cell(c.avgSleep)}${o.includeMood ? cell(pct(c.lowMoodShare)) : ''}</tr>`,
+      )
+      .join('');
+    const monthRows = lg.months
+      .map((m) => `<tr>${cell(monthLabel(m.month))}${cell(m.bleedingDays)}${cell(m.painDays)}${cell(m.maxPain)}${cell(m.avgSleep)}${o.includeMood ? cell(m.checkIns) + cell(pct(m.hardShare)) : ''}</tr>`)
+      .join('');
+    sections.push(`<h2>Changes over time</h2><table>${rows([
+      ['Complete cycles in this period', String(sm.cycleCount)],
+      ['Cycle length, middle value', sm.medianLength !== null ? `${sm.medianLength} days` : 'Not enough data'],
+      ['Cycle length, shortest to longest', sm.minLength !== null ? `${sm.minLength}–${sm.maxLength} days` : '—'],
+      ['Bleeding days, middle value', sm.medianPeriod !== null ? `${sm.medianPeriod} days` : '—'],
+      ['Highest pain per cycle', sm.painPeakTrend === null ? 'Not enough data' : { up: 'Higher in recent cycles', down: 'Lower in recent cycles', steady: 'About the same' }[sm.painPeakTrend]],
+    ])}</table>
+    ${cycleChart(lg.cycles)}
+    <h3>Cycle by cycle</h3><table class="grid"><tr><th>Start</th><th>Length (days)</th><th>Bleeding days</th><th>Pain logs</th><th>Highest pain</th><th>Avg sleep (h)</th>${o.includeMood ? '<th>Hard-mood check-ins</th>' : ''}</tr>${cycleRows}</table>
+    <h3>Month by month</h3><table class="grid"><tr><th>Month</th><th>Bleeding days</th><th>Days with pain</th><th>Highest pain</th><th>Avg sleep (h)</th>${o.includeMood ? '<th>Check-ins</th><th>Hard-mood check-ins</th>' : ''}</tr>${monthRows}</table>
+    <h3>Patterns across cycles</h3>${list(lg.patterns.map((i) => `${i.title}. ${i.how}`))}
+    <p class="muted">Patterns are observations from the person’s own records, not diagnoses. “Hard-mood” means a check-in of anxious, sad, irritated, exhausted or overwhelmed.</p>`);
+  }
+
   if (o.includeNotes && r.notes.length) {
     sections.push(`<h2>Notes from pain logs</h2>${list(r.notes.map((n) => `${formatLong(n.date)}: ${n.text}`))}`);
   }
@@ -119,7 +173,7 @@ export function buildReportHtml(
   h1{font-family:Georgia,serif;font-weight:500;color:#49364B;margin:0 0 4px;font-size:24px}
   h2{font-family:Georgia,serif;font-weight:500;color:#49364B;border-bottom:1px solid #EBD9E1;padding-bottom:4px;margin-top:26px;font-size:17px}
   h3{font-size:13px;margin:14px 0 4px;color:#6E5A70}
-  table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:5px 8px;border-bottom:1px solid #F3E8EC}th{width:48%;font-weight:500;color:#6E5A70}
+  table{border-collapse:collapse;width:100%}table.grid th{width:auto;font-size:11px}table.grid td{font-size:11.5px}svg{margin:10px 0}th,td{text-align:left;padding:5px 8px;border-bottom:1px solid #F3E8EC}th{width:48%;font-weight:500;color:#6E5A70}
   .muted{color:#8A768C}.banner{background:#F7DCE5;padding:10px 14px;border-radius:10px;margin:12px 0}
   .foot{margin-top:28px;font-size:10.5px;color:#8A768C}
   </style></head><body>

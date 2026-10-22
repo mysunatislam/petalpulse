@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button, Card, ChipGroup, Gap, Notice, Pill, Row, Screen, Segmented, T, tap } from '../components/ui';
 import { useApp } from '../store/app';
 import { useCycle, useTodayEntries } from '../store/derived';
-import { MealPick, recommendMeals } from '../engines/personalization';
+import { MealPick, nourishFocus, recommendMeals } from '../engines/personalization';
+import { usualSymptoms } from '../engines/patterns';
 import { MEALS, mealAllowed } from '../data/meals';
 import type { Symptom } from '../data/types';
 import { useTheme } from '../theme/useTheme';
@@ -14,11 +15,13 @@ export default function Nourish() {
   const profile = useApp((s) => s.profile);
   const lang = useApp((s) => s.settings.language);
   const favorites = useApp((s) => s.favorites);
-  const { status } = useCycle();
+  const { status, periods } = useCycle();
+  const dayLogs = useApp((s) => s.dayLogs);
+  const usuallyBefore = useMemo(() => usualSymptoms({ periods, dayLogs, moods: [], pain: [] }, 'before_period'), [periods, dayLogs]);
   const { log } = useTodayEntries();
   const [energy, setEnergy] = useState<string | null>(log?.energy ? String(log.energy) : null);
   const [appetite, setAppetite] = useState<'low' | 'normal' | 'high' | null>(null);
-  const [symptoms, setSymptoms] = useState<Symptom[]>(log?.symptoms?.filter((s) => ['cramps', 'bloating', 'nausea', 'fatigue'].includes(s)) ?? []);
+  const [symptoms, setSymptoms] = useState<Symptom[]>(log?.symptoms?.filter((s) => ['cramps', 'bloating', 'nausea', 'fatigue', 'cravings', 'headache'].includes(s)) ?? []);
   const [tab, setTab] = useState<'today' | 'saved' | 'all'>('today');
   const [open, setOpen] = useState<string | null>(null);
 
@@ -31,9 +34,12 @@ export default function Nourish() {
         energy: energy ? Number(energy) : null,
         appetite,
         favorites: favorites.map((f) => f.id),
+        phase: status.phase,
+        usuallyBefore,
       }),
-    [profile, symptoms, status.phase, energy, appetite, favorites],
+    [profile, symptoms, status.phase, energy, appetite, favorites, usuallyBefore],
   );
+  const focus = nourishFocus({ bleeding: status.phase === 'menstrual', symptoms, phase: status.phase, usuallyBefore, energy: energy ? Number(energy) : null });
   const favIds = favorites.map((f) => f.id);
   const allowed = MEALS.filter((m) => mealAllowed(m, profile.diet, profile.allergies));
   const list: MealPick[] =
@@ -61,7 +67,17 @@ export default function Nourish() {
         <Gap h={10} />
         <T v="label">Today I have</T>
         <Gap h={6} />
-        <ChipGroup multi options={[{ value: 'cramps', label: 'Cramps' }, { value: 'bloating', label: 'Bloating' }, { value: 'nausea', label: 'Nausea' }, { value: 'fatigue', label: 'Tiredness' }]} value={symptoms} onChange={(v) => setSymptoms(v as Symptom[])} />
+        <ChipGroup multi options={[{ value: 'cramps', label: 'Cramps' }, { value: 'bloating', label: 'Bloating' }, { value: 'nausea', label: 'Nausea' }, { value: 'fatigue', label: 'Tiredness' }, { value: 'cravings', label: 'Cravings' }, { value: 'headache', label: 'Headache' }]} value={symptoms} onChange={(v) => setSymptoms(v as Symptom[])} />
+      </Card>
+
+      <Gap h={12} />
+      <Card tint={t.sage} accessibilityLabel={focus.title}>
+        <T v="h3">{focus.title}</T>
+        {focus.points.map((p) => (
+          <T key={p} v="small" style={{ marginTop: 4 }}>
+            • {p}
+          </T>
+        ))}
       </Card>
 
       <Gap h={16} />
@@ -76,7 +92,7 @@ export default function Nourish() {
       />
       <Gap h={14} />
       <View style={{ gap: 14 }}>
-        {list.map(({ meal, reason }) => {
+        {list.map(({ meal, reason, tip }) => {
           const fav = favIds.includes(meal.id);
           const expanded = open === meal.id;
           return (
@@ -102,6 +118,11 @@ export default function Nourish() {
                 <T v="small" muted style={{ marginTop: 6 }}>
                   {meal.ingredients.join(' · ')}
                 </T>
+                {tip ? (
+                  <T v="small" soft style={{ marginTop: 4 }}>
+                    🍋 {tip}
+                  </T>
+                ) : null}
                 {expanded && (
                   <Notice tone="calm" title="Why this may help">
                     <T v="small">{meal.why}</T>

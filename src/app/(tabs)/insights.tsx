@@ -8,9 +8,17 @@ import { useApp } from '../../store/app';
 import { useCycle, useInsights } from '../../store/derived';
 import { buildCycles } from '../../engines/cycle';
 import { byCycleDay, Insight, pearson } from '../../engines/insights';
-import { formatShort } from '../../lib/dates';
+import { addDays, formatShort, monthName, num, todayISO } from '../../lib/dates';
+import { buildLongitudinal } from '../../engines/patterns';
+import { useLocalize } from '../../i18n';
 import { useTheme } from '../../theme/useTheme';
 import type { Mood } from '../../data/types';
+
+// Bangla month names can't be cut to three letters without breaking a conjunct.
+const shortMonth = (i: number) => {
+  const n = monthName(i);
+  return /^[A-Za-z]/.test(n) ? n.slice(0, 3) : n;
+};
 
 const VALENCE: Record<Mood, number> = { happy: 5, peaceful: 4.5, mixed: 3, anxious: 2, irritated: 2, sad: 1.5, exhausted: 1.5, overwhelmed: 1 };
 
@@ -35,6 +43,11 @@ export default function Insights() {
   const [compare, setCompare] = useState<Compare>('pain_cycle');
   const [how, setHow] = useState<string | null>(null);
   const [showDismissed, setShowDismissed] = useState(false);
+  const L = useLocalize();
+  const six = useMemo(() => {
+    const to = todayISO();
+    return buildLongitudinal({ periods, dayLogs, moods, pain, from: addDays(to, -183), to });
+  }, [periods, dayLogs, moods, pain]);
 
   const cycles = buildCycles(periods).filter((c) => c.length !== null).slice(-6);
   const garden = cycles.map((c) => {
@@ -99,6 +112,59 @@ export default function Insights() {
       <T v="small" soft style={{ marginTop: 10 }}>
         Patterns show things that happen together in your own records. They don’t prove one causes the other, and they aren’t medical advice. Demo insights are illustrative only.
       </T>
+
+      {six.summary.cycleCount >= 2 && (
+        <>
+          <SectionTitle action="PDF for a clinician" onAction={() => router.push('/export')}>
+            The last six months
+          </SectionTitle>
+          <Card>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <View style={{ flex: 1 }}>
+                <T v="label">Cycle length</T>
+                <T v="h3">{`${num(six.summary.minLength ?? 0)}–${num(six.summary.maxLength ?? 0)} ${L('days')}`}</T>
+              </View>
+              <View style={{ flex: 1 }}>
+                <T v="label">Bleeding days</T>
+                <T v="h3">{`${num(six.summary.medianPeriod ?? 0)} ${L('days')}`}</T>
+              </View>
+              <View style={{ flex: 1 }}>
+                <T v="label">Highest pain</T>
+                <T v="h3">{six.summary.painPeakTrend === null ? '—' : { up: 'A bit higher', down: 'A bit lower', steady: 'About the same' }[six.summary.painPeakTrend]}</T>
+              </View>
+            </Row>
+            <Gap h={12} />
+            <T v="label">Days with pain, month by month</T>
+            <PetalBars data={six.months.map((m) => ({ label: shortMonth(Number(m.month.slice(5)) - 1), value: m.painDays }))} max={Math.max(4, ...six.months.map((m) => m.painDays))} color={t.primary} height={110} />
+            <Gap h={8} />
+            <T v="label">Cycle by cycle</T>
+            {six.cycles.map((c) => (
+              <Row
+                key={c.start}
+                style={{ justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderColor: t.border }}
+                accessible
+                accessibilityLabel={`${formatShort(c.start)}: ${c.length ? `${num(c.length)} ${L('days')}` : L('current cycle')}, ${num(c.periodLength)} ${L('bleeding days')}${c.maxPain !== null ? `, ${L('highest pain')} ${num(c.maxPain)}/10` : ''}`}
+              >
+                <T v="small" style={{ flex: 1.2 }}>
+                  {formatShort(c.start)}
+                </T>
+                <T v="small" muted style={{ flex: 1 }}>
+                  {c.length ? `${num(c.length)} ${L('days')}` : L('current cycle')}
+                </T>
+                <T v="small" muted style={{ flex: 1 }}>
+                  {`🩸 ${num(c.periodLength)}`}
+                </T>
+                <T v="small" muted style={{ flex: 1 }}>
+                  {c.maxPain !== null ? `🤍 ${num(c.maxPain)}/10` : '—'}
+                </T>
+              </Row>
+            ))}
+            <T v="small" soft style={{ marginTop: 8 }}>
+              🩸 bleeding days · 🤍 highest pain logged in that cycle
+            </T>
+          </Card>
+        </>
+      )}
 
       <SectionTitle>Explore a relationship</SectionTitle>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
