@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
+import { useLocalize } from '../i18n';
 import { useTheme } from '../theme/useTheme';
 import { T } from './ui';
 
@@ -182,6 +183,7 @@ export function Scatter({
   width?: number;
   height?: number;
 }) {
+  const L = useLocalize();
   const t = useTheme();
   const pad = { l: 30, r: 10, t: 10, b: 28 };
   const w = width - pad.l - pad.r;
@@ -198,10 +200,10 @@ export function Scatter({
             <Circle key={i} cx={sx(p.x) + ((i % 3) - 1) * 1.5} cy={sy(p.y) + ((i % 5) - 2) * 1.2} r={4} fill={color} opacity={0.55} />
           ))}
           <SvgText x={pad.l + w / 2} y={height - 6} fontSize={10.5} fill={t.textSoft} textAnchor="middle">
-            {xLabel}
+            {L(xLabel)}
           </SvgText>
           <SvgText x={10} y={pad.t + h / 2} fontSize={10.5} fill={t.textSoft} textAnchor="middle" rotation={-90} originX={10} originY={pad.t + h / 2}>
-            {yLabel}
+            {L(yLabel)}
           </SvgText>
           {[xDomain[0], xDomain[1]].map((x) => (
             <SvgText key={x} x={sx(x)} y={pad.t + h + 13} fontSize={10} fill={t.textSoft} textAnchor="middle">

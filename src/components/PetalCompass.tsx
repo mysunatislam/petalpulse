@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Defs, G, Path, RadialGradient, Stop } from 'react-native-svg';
 import type { CycleStatus, Phase } from '../engines/cycle';
+import { num } from '../lib/dates';
 import { PHASE_PETALS } from '../theme/tokens';
 import { useMotionOff, useTheme } from '../theme/useTheme';
 import { T } from './ui';
@@ -139,7 +140,7 @@ export function PetalCompass({ status, size = 300 }: { status: CycleStatus; size
             {status.cycleDay ? 'Cycle day' : 'Begin'}
           </T>
           <T v="display" center style={{ fontSize: 42, lineHeight: 46 }}>
-            {status.cycleDay ?? '✿'}
+            {status.cycleDay ? num(status.cycleDay) : '✿'}
           </T>
         </View>
       </View>

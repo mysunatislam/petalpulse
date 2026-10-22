@@ -69,18 +69,37 @@ export function monthMatrix(year: number, month0: number): (ISODate | null)[][] 
 const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+const MONTHS_BN = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+const WEEKDAYS = { en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], bn: ['সোম', 'মঙ্গল', 'বুধ', 'বৃহ', 'শুক্র', 'শনি', 'রবি'] };
+const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
+
+// Display language for dates and numbers. Set by the store whenever settings change.
+let dateLang: 'en' | 'bn' = 'en';
+export function setDateLanguage(lang: 'en' | 'bn') {
+  dateLang = lang;
+}
+
+/** A number in the display language's digits. */
+export function num(n: number | string): string {
+  return dateLang === 'bn' ? String(n).replace(/[0-9]/g, (d) => BN_DIGITS[Number(d)]) : String(n);
+}
+
+export function weekdayInitials(): string[] {
+  return WEEKDAYS[dateLang];
+}
+
 export function monthName(month0: number): string {
-  return MONTHS_EN[month0];
+  return dateLang === 'bn' ? MONTHS_BN[month0] : MONTHS_EN[month0];
 }
 
 export function formatShort(date: ISODate): string {
   const [, m, d] = date.split('-').map(Number);
-  return `${MONTHS_SHORT[m - 1]} ${d}`;
+  return dateLang === 'bn' ? `${num(d)} ${MONTHS_BN[m - 1]}` : `${MONTHS_SHORT[m - 1]} ${d}`;
 }
 
 export function formatLong(date: ISODate): string {
   const [y, m, d] = date.split('-').map(Number);
-  return `${MONTHS_EN[m - 1]} ${d}, ${y}`;
+  return dateLang === 'bn' ? `${num(d)} ${MONTHS_BN[m - 1]} ${num(y)}` : `${MONTHS_EN[m - 1]} ${d}, ${y}`;
 }
 
 export function formatRange(start: ISODate, end: ISODate): string {

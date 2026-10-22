@@ -8,7 +8,7 @@ import { Button, Card, ChipGroup, Gap, Notice, Row, Segmented, Stepper, T, Toggl
 import { MonthCalendar } from '../components/Calendar';
 import { PetalBloom } from '../components/PetalCompass';
 import { useApp } from '../store/app';
-import { useT } from '../i18n';
+import { useT, useLocalize } from '../i18n';
 import { useMotionOff, useTheme } from '../theme/useTheme';
 import { addDays, formatLong, todayISO } from '../lib/dates';
 import type { Allergy, DietPref, Goal, NotificationStyle, PredictionCaveat, Profile, Regularity, Symptom } from '../data/types';
@@ -49,6 +49,7 @@ const CAVEATS: { value: PredictionCaveat; label: string }[] = [
 const STEPS = ['hello', 'goal', 'about', 'period', 'rhythm', 'body', 'food', 'prefs', 'bloom'] as const;
 
 export default function Onboarding() {
+  const L = useLocalize();
   const t = useTheme();
   const tr = useT();
   const motionOff = useMotionOff();
@@ -141,7 +142,7 @@ export default function Onboarding() {
                   <TextInput
                     value={p.name}
                     onChangeText={(name) => set({ name: name.slice(0, 40) })}
-                    placeholder="Your preferred name (optional)"
+                    placeholder={L('Your preferred name (optional)')}
                     placeholderTextColor={t.textSoft}
                     accessibilityLabel="Preferred name"
                     style={[styles.input, { color: t.text, borderColor: t.border, backgroundColor: t.surfaceGlass, fontFamily: fonts.sans }]}
@@ -344,7 +345,7 @@ export default function Onboarding() {
         </KeyboardAvoidingView>
         {key !== 'bloom' && (
           <Row style={styles.footer}>
-            {step > 0 ? <Button kind="ghost" title="Back" onPress={back} small /> : <View />}
+            {step > 0 ? <Button kind="ghost" title="Previous" onPress={back} small /> : <View />}
             <Row style={{ gap: 8 }}>
               {step > 0 && step < STEPS.length - 2 && <Button kind="ghost" title={tr('common.skip')} onPress={next} small />}
               <Button title={step === 0 ? 'Let’s begin' : tr('common.continue')} onPress={next} small style={{ paddingHorizontal: 26 }} />

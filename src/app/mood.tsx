@@ -10,12 +10,13 @@ import { suggestThemes } from '../engines/personalization';
 import { screenText } from '../engines/safety';
 import { addDays, formatShort, uid } from '../lib/dates';
 import { TAG_LABEL } from '../lib/labels';
-import { useT } from '../i18n';
+import { useT, useLocalize } from '../i18n';
 import { useTheme } from '../theme/useTheme';
 import { fonts } from '../theme/tokens';
 import type { Mood, MoodTag } from '../data/types';
 
 export default function MoodMirror() {
+  const L = useLocalize();
   const t = useTheme();
   const tr = useT();
   const today = useToday();
@@ -111,7 +112,7 @@ export default function MoodMirror() {
                 setThemes(null);
               }}
               multiline
-              placeholder="No rules. A word, a sentence, or a page."
+              placeholder={L('No rules. A word, a sentence, or a page.')}
               placeholderTextColor={t.textSoft}
               accessibilityLabel="Journal entry"
               style={{ minHeight: 110, borderRadius: 20, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, padding: 16, color: t.text, fontFamily: fonts.serifItalic, fontSize: 16, lineHeight: 23, textAlignVertical: 'top' }}

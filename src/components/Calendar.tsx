@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { ISODate, monthMatrix, monthName, todayISO } from '../lib/dates';
+import { ISODate, monthMatrix, monthName, num, todayISO, weekdayInitials } from '../lib/dates';
 import { useTheme } from '../theme/useTheme';
 import { IconButton, Row, T, tap } from './ui';
 
@@ -43,14 +43,14 @@ export function MonthCalendar({
           <T v="h3">‹</T>
         </IconButton>
         <T v="h2" accessibilityRole="header">
-          {monthName(ym.m)} {ym.y}
+          {`${monthName(ym.m)} ${num(ym.y)}`}
         </T>
         <IconButton label="Next month" onPress={() => shift(1)}>
           <T v="h3">›</T>
         </IconButton>
       </Row>
       <Row>
-        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+        {weekdayInitials().map((d, i) => (
           <T key={i} v="small" soft center style={{ flex: 1 }} aria-hidden>
             {d}
           </T>
@@ -91,7 +91,7 @@ export function MonthCalendar({
                     color={isSel ? t.accentText : disabled ? t.textSoft : deco?.fill ? '#2E1F30' : t.text}
                     style={[isToday && !isSel ? { textDecorationLine: 'underline', fontWeight: '700' } : null, disabled ? { opacity: 0.4 } : null]}
                   >
-                    {Number(d.slice(8))}
+                    {num(Number(d.slice(8)))}
                   </T>
                 </View>
                 {deco?.dot ? <View style={[styles.dot, { backgroundColor: deco.dot }]} /> : <View style={styles.dotSpace} />}

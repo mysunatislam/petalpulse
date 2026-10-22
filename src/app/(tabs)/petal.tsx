@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useLocalize } from '../../i18n';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,6 +42,7 @@ const ACTIONS: Record<string, string> = {
 };
 
 export default function PetalAI() {
+  const L = useLocalize();
   const t = useTheme();
   const motionOff = useMotionOff();
   const s = useApp();
@@ -71,12 +73,14 @@ export default function PetalAI() {
   }, [chat.length, motionOff]);
 
   const send = async (raw: string) => {
-    const msg = raw.trim();
-    if (!msg || busy) return;
-    if (ACTIONS[msg]) {
-      router.push(ACTIONS[msg] as never);
+    const key = raw.trim();
+    if (!key || busy) return;
+    if (ACTIONS[key]) {
+      router.push(ACTIONS[key] as never);
       return;
     }
+    // Starters and chips are written in English; send them in the language the person sees.
+    const msg = STARTERS.includes(key) || chips.includes(key) ? L(key) : key;
     tap();
     setText('');
     const user: ChatMessage = { id: uid('m'), createdAt: new Date().toISOString(), role: 'user', text: msg };
@@ -211,7 +215,7 @@ export default function PetalAI() {
             <TextInput
               value={text}
               onChangeText={setText}
-              placeholder="Tell Petal what’s on your mind…"
+              placeholder={L('Tell Petal what’s on your mind…')}
               placeholderTextColor={t.textSoft}
               multiline
               accessibilityLabel="Message to Petal"

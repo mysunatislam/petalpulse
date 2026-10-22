@@ -8,12 +8,13 @@ import { applyConsentChange, CONSENT_COPY, ConsentKey, DATA_PROMISES, describeSh
 import { biometricAvailable, clearPin, setPin } from '../lib/secure';
 import { shareJson } from '../lib/share';
 import { requestPermission, syncNotifications } from '../lib/notifications';
-import { useT } from '../i18n';
+import { useT, useLocalize } from '../i18n';
 import { useTheme } from '../theme/useTheme';
 import { fonts } from '../theme/tokens';
 import type { Allergy, DietPref, NotificationStyle, PredictionCaveat, Profile, Settings } from '../data/types';
 
 export default function SettingsScreen() {
+  const L = useLocalize();
   const t = useTheme();
   const tr = useT();
   const s = useApp();
@@ -70,7 +71,7 @@ export default function SettingsScreen() {
       <Card>
         <T v="label">Preferred name</T>
         <Gap h={6} />
-        <TextInput value={profile.name} onChangeText={(name) => prof({ name: name.slice(0, 40) })} placeholder="Optional" placeholderTextColor={t.textSoft} style={inputStyle} accessibilityLabel="Preferred name" />
+        <TextInput value={profile.name} onChangeText={(name) => prof({ name: name.slice(0, 40) })} placeholder={L('Optional')} placeholderTextColor={t.textSoft} style={inputStyle} accessibilityLabel="Preferred name" />
         <Gap h={14} />
         <T v="label">Typical cycle length</T>
         <Gap h={6} />
