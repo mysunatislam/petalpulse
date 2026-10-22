@@ -110,3 +110,9 @@ export function formatRange(start: ISODate, end: ISODate): string {
 export function uid(prefix = 'id'): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/** Bangla day and month for text that must be Bangla whatever the app language is (e.g. a Bangla chat reply). */
+export function formatShortBn(date: ISODate): string {
+  const [, m, d] = date.split('-').map(Number);
+  return `${String(d).replace(/[0-9]/g, (x) => BN_DIGITS[Number(x)])} ${MONTHS_BN[m - 1]}`;
+}

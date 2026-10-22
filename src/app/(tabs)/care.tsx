@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Card, Gap, Row, Screen, SectionTitle, T } from '../../components/ui';
 import { useApp } from '../../store/app';
 import { useCycle, useTodayEntries } from '../../store/derived';
-import { comfortPath, COMFORT_ITEMS } from '../../engines/personalization';
+import { comfortPath, COMFORT_ITEMS, whatHelps } from '../../engines/personalization';
 import { modeLabel } from '../../lib/labels';
 import { useTheme } from '../../theme/useTheme';
 
@@ -14,8 +14,8 @@ export default function Care() {
   const pain = useApp((s) => s.pain);
   const { status } = useCycle();
   const { pain: todayPain } = useTodayEntries();
-  const helped = [...new Set(pain.flatMap((p) => p.helped))];
-  const ideas = todayPain ? comfortPath(todayPain, helped) : [COMFORT_ITEMS.heat, COMFORT_ITEMS.breathing, COMFORT_ITEMS.fluids];
+  const ideas = todayPain ? comfortPath(todayPain, pain.filter((p) => p.id !== todayPain.id)) : [COMFORT_ITEMS.heat, COMFORT_ITEMS.breathing, COMFORT_ITEMS.fluids];
+  const helps = whatHelps(pain);
 
   const tiles = [
     { title: 'Pain Passport', detail: 'Body map, timeline & monthly summary', icon: '🗺️', tint: t.blush, go: '/pain/passport' },
@@ -69,11 +69,33 @@ export default function Care() {
                 <T v="small" muted>
                   {c.detail}
                 </T>
+                {c.note ? (
+                  <T v="small" color={t.primaryText} style={{ marginTop: 4 }}>
+                    {c.note}
+                  </T>
+                ) : null}
               </View>
             </Row>
           </Card>
         ))}
       </View>
+      {helps.length > 0 && (
+        <>
+          <Gap h={12} />
+          <Card tint={t.sage} accessibilityLabel="What tends to help you">
+            <T v="label">What tends to help you</T>
+            <Gap h={6} />
+            {helps.map((h) => (
+              <T key={h.item.id} v="small">
+                {h.item.icon} {`${h.item.title} (helped ${h.helped}/${h.tried})`}
+              </T>
+            ))}
+            <T v="small" soft style={{ marginTop: 6 }}>
+              Learned from what you marked in your Comfort Path.
+            </T>
+          </Card>
+        </>
+      )}
 
       <SectionTitle>Support</SectionTitle>
       <Card onPress={() => router.push('/support')} tint={t.warnBg} accessibilityLabel="When to seek care, and support lines">

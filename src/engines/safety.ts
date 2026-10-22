@@ -138,6 +138,18 @@ const CRISIS_PATTERNS: RegExp[] = [
   /মরে\s*যেতে\s*চাই/,
   /বাঁচতে\s*চাই\s*না/,
   /নিজেকে\s*(শেষ|আঘাত)/,
+  /মরতে\s*চাই/,
+  /বাঁচতে\s*(ইচ্ছা|ইচ্ছে)\s*করে\s*না/,
+  /নিজের\s*ক্ষতি\s*কর/,
+  /জীবন\s*শেষ\s*করে/,
+  /আমাকে\s*ছাড়া\s*(সবাই\s*)?ভালো\s*থাকবে/,
+  /(গায়ে\s*হাত\s*তোলে|মারধর\s*করে)/,
+  // Banglish (Bangla typed in English letters)
+  /\b(more|mor)\s*jete\s*chai\b/i,
+  /\bmorte\s*chai\b/i,
+  /\b(bachte|banchte)\s*(chai|icche|ichha|iccha)\s*(kore\s*)?na\b/i,
+  /\ba+tmo\s*hott?a\b/i,
+  /\bnijeke\s*(shesh|sesh|aghat|khoti)\b/i,
 ];
 
 const URGENT_MEDICAL_PATTERNS: RegExp[] = [
@@ -151,6 +163,12 @@ const URGENT_MEDICAL_PATTERNS: RegExp[] = [
   /\bhigh fever\b|\bfever\b.*\bpelvic\b/i,
   /অজ্ঞান/,
   /প্রচুর\s*রক্ত/,
+  /(অসহ্য|প্রচণ্ড|প্রচন্ড)\s*ব্যথা/,
+  /(গর্ভবতী|প্রেগন্যান্ট).*(ব্যথা|রক্ত)/,
+  /শ্বাস\s*নিতে\s*পারছি\s*না/,
+  /\b(ojnan|ognan)\b/i,
+  /\b(onek|prochur)\s*rokto\b/i,
+  /\b(osojjo|oshojjo|prochondo)\s*(betha|batha|byatha)\b/i,
 ];
 
 export function screenText(text: string): TextRisk {

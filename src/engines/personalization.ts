@@ -15,6 +15,8 @@ export interface ComfortSuggestion {
   title: string;
   detail: string;
   icon: string;
+  /** What we've learned from this person's own logs, e.g. "Helped you 3 of 4 times". */
+  note?: string;
 }
 
 const COMFORT: Record<string, ComfortSuggestion> = {
@@ -30,7 +32,44 @@ const COMFORT: Record<string, ComfortSuggestion> = {
   pharmacist: { id: 'pharmacist', title: 'Ask about pain relief', detail: 'If you usually take pain relief, a pharmacist or doctor can advise what is suitable for you.', icon: '💬' },
 };
 
-export function comfortPath(ep: Pick<PainEpisode, 'regions' | 'intensity' | 'qualities'>, helpedBefore: string[] = []): ComfortSuggestion[] {
+export interface ComfortRecord {
+  tried: number;
+  helped: number;
+  /** Counts from episodes that share a body region with the current one. */
+  similarTried: number;
+  similarHelped: number;
+}
+
+/** How each comfort idea has worked for this person, weighted toward similar pain. */
+export function comfortHistory(history: PainEpisode[], regions: BodyRegion[] = []): Record<string, ComfortRecord> {
+  const out: Record<string, ComfortRecord> = {};
+  const here = new Set(regions);
+  for (const e of history) {
+    const similar = e.regions.some((r) => here.has(r));
+    for (const id of new Set([...e.tried, ...e.helped])) {
+      const rec = (out[id] ??= { tried: 0, helped: 0, similarTried: 0, similarHelped: 0 });
+      const helped = e.helped.includes(id);
+      rec.tried++;
+      if (helped) rec.helped++;
+      if (similar) {
+        rec.similarTried++;
+        if (helped) rec.similarHelped++;
+      }
+    }
+  }
+  return out;
+}
+
+const times = (n: number) => (n === 1 ? 'time' : 'times');
+
+/**
+ * Comfort ideas for this episode. Starts from what generally suits the body
+ * region and intensity, then learns from the person's own "I tried this" and
+ * "It helped" taps: things that helped with similar pain rise, things that
+ * keep not helping sink (but stay available). "Ask about pain relief" is never
+ * dropped for stronger pain.
+ */
+export function comfortPath(ep: Pick<PainEpisode, 'regions' | 'intensity' | 'qualities'>, history: PainEpisode[] = []): ComfortSuggestion[] {
   const ids: string[] = [];
   const r = new Set<BodyRegion>(ep.regions);
   const q = new Set<PainQuality>(ep.qualities);
@@ -43,10 +82,42 @@ export function comfortPath(ep: Pick<PainEpisode, 'regions' | 'intensity' | 'qua
   if (ep.intensity <= 6) ids.push('movement');
   ids.push('fluids', 'breathing');
   if (ep.intensity >= 5) ids.push('pharmacist');
-  // Put things that helped this user before first.
+
+  const rec = comfortHistory(history, ep.regions);
+  // Something that helped with similar pain is worth offering even if the rules didn't pick it.
+  for (const [id, x] of Object.entries(rec)) if (COMFORT[id] && x.similarHelped > 0 && !ids.includes(id)) ids.push(id);
+
   const unique = [...new Set(ids)];
-  unique.sort((a, b) => Number(helpedBefore.includes(b)) - Number(helpedBefore.includes(a)));
-  return unique.slice(0, 6).map((id) => COMFORT[id]);
+  const scored = unique.map((id, i) => {
+    const x = rec[id];
+    let score = (unique.length - i) * 0.1;
+    let note: string | undefined;
+    if (x) {
+      const w = x.similarTried + 0.5 * (x.tried - x.similarTried);
+      const h = x.similarHelped + 0.5 * (x.helped - x.similarHelped);
+      score += ((h + 1) / (w + 2) - 0.5) * 4;
+      const [hn, tn] = x.similarTried ? [x.similarHelped, x.similarTried] : [x.helped, x.tried];
+      if (hn > 0) note = `Helped you ${hn} of ${tn} ${times(tn)}`;
+      else if (tn >= 3) {
+        note = 'Hasn’t helped the last few times. Still here if you want it.';
+        score -= 3;
+      }
+    }
+    return { id, score, note };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  let top = scored.slice(0, 6);
+  if (ep.intensity >= 5 && !top.some((x) => x.id === 'pharmacist')) top = [...top.slice(0, 5), scored.find((x) => x.id === 'pharmacist')!];
+  return top.map(({ id, note }) => (note ? { ...COMFORT[id], note } : COMFORT[id]));
+}
+
+/** What has tended to help overall: ideas tried at least twice, best first. */
+export function whatHelps(history: PainEpisode[], min = 2): { item: ComfortSuggestion; tried: number; helped: number }[] {
+  return Object.entries(comfortHistory(history))
+    .filter(([id, x]) => COMFORT[id] && x.tried >= min && x.helped > 0)
+    .map(([id, x]) => ({ item: COMFORT[id], tried: x.tried, helped: x.helped }))
+    .sort((a, b) => b.helped / b.tried - a.helped / a.tried || b.tried - a.tried)
+    .slice(0, 3);
 }
 
 export const COMFORT_ITEMS = COMFORT;
@@ -59,6 +130,8 @@ export interface MealPick {
   meal: Meal;
   reason: string;
   score: number;
+  /** A small, optional way to get more from the meal. */
+  tip?: string;
 }
 
 export interface NourishContext {
@@ -68,7 +141,12 @@ export interface NourishContext {
   energy: number | null;
   appetite: 'low' | 'normal' | 'high' | null;
   favorites?: string[];
+  phase?: Phase;
+  /** Symptoms that tend to come back before this person's period (from multi-cycle patterns). */
+  usuallyBefore?: Symptom[];
 }
+
+export const IRON_TIP = 'Add lemon, guava or an orange on the side: vitamin C helps your body use the iron.';
 
 export function recommendMeals(ctx: NourishContext, count = 3): MealPick[] {
   const want = new Map<MealTag, string>();
@@ -81,9 +159,22 @@ export function recommendMeals(ctx: NourishContext, count = 3): MealPick[] {
     want.set('warm', 'Warm and comforting on a crampy day');
     want.set('magnesium', 'A source of magnesium');
   }
+  if (ctx.symptoms.includes('fatigue')) {
+    want.set('iron', 'Iron and protein, for a tired day');
+    want.set('protein', 'Protein for steadier energy');
+  }
+  if (ctx.symptoms.includes('cravings')) {
+    want.set('fiber', 'Satisfying, with fibre and protein, when cravings hit');
+    want.set('magnesium', 'A source of magnesium');
+  }
+  if (ctx.symptoms.includes('headache')) want.set('hydrating', 'Hydrating, as headaches can come with being a bit dehydrated');
   if (ctx.symptoms.includes('bloating')) want.set('hydrating', 'Hydrating and light');
   if (ctx.symptoms.includes('nausea')) want.set('light', 'Gentle on a queasy stomach');
   if (ctx.appetite === 'low') want.set('light', 'Small and gentle when appetite is low');
+  if (want.size === 0 && ctx.phase === 'luteal') {
+    want.set('fiber', 'Fibre and magnesium, which many people like in the days before a period');
+    want.set('magnesium', 'A source of magnesium');
+  }
   if (want.size === 0) {
     want.set('protein', 'A balanced plate with protein');
     want.set('fiber', 'Fibre for steady energy');
@@ -102,7 +193,8 @@ export function recommendMeals(ctx: NourishContext, count = 3): MealPick[] {
     }
     if (ctx.energy !== null && ctx.energy <= 2 && meal.minutes <= 15) score += 1;
     if (ctx.favorites?.includes(meal.id)) score += 0.5;
-    return { meal, reason: reason || 'A balanced, satisfying option', score };
+    const tip = meal.tags.includes('iron') && !meal.tags.includes('vitamin_c') && (ctx.bleeding || want.has('iron')) ? IRON_TIP : undefined;
+    return { meal, reason: reason || 'A balanced, satisfying option', score, ...(tip ? { tip } : {}) };
   });
   scored.sort((a, b) => b.score - a.score || a.meal.minutes - b.meal.minutes);
   // keep variety across regions when "both"
@@ -119,6 +211,27 @@ export function recommendMeals(ctx: NourishContext, count = 3): MealPick[] {
     picks.push(s);
   }
   return picks;
+}
+
+/** A short focus for today at the top of Nourish Me. Positive ideas only, nothing to cut out. */
+export function nourishFocus(ctx: Pick<NourishContext, 'bleeding' | 'symptoms' | 'phase' | 'usuallyBefore' | 'energy'>): { title: string; points: string[] } {
+  const points: string[] = [];
+  let title = 'Today’s focus: balanced and satisfying';
+  if (ctx.bleeding) {
+    title = 'Today’s focus: iron and warmth';
+    points.push('Iron-rich foods like dal, leafy greens, eggs, fish or meat help replace what you lose while bleeding.');
+    points.push('Pair them with vitamin C, like lemon, guava or orange.');
+  } else if (ctx.phase === 'luteal') {
+    title = 'Today’s focus: steady energy';
+    points.push('Regular meals with fibre and protein can help energy feel steadier.');
+  }
+  if (ctx.symptoms.includes('bloating') || ctx.symptoms.includes('headache')) points.push('Keep water, daab or warm drinks nearby through the day.');
+  if (ctx.energy !== null && ctx.energy <= 2) points.push('Low effort is fine: no-cook plates and leftovers count.');
+  const ahead = (ctx.usuallyBefore ?? []).filter((s) => !ctx.symptoms.includes(s));
+  if (ctx.phase === 'luteal' && ahead.includes('cravings')) points.push('Cravings often come up for you before your period. Having a snack you enjoy ready can help.');
+  if (ctx.phase === 'luteal' && ahead.includes('bloating')) points.push('Bloating often comes up for you before your period. Lighter, warm meals and plenty of fluids may feel better.');
+  if (!points.length) points.push('Eat regularly, include some protein and colour, and enjoy it.');
+  return { title, points: points.slice(0, 3) };
 }
 
 /* ------------------------------------------------------------------ */

@@ -26,7 +26,7 @@ export const DEMO_NAME = 'Mira';
 
 export function generateDemo(today: ISODate): DemoData {
   const r = rng(20261022);
-  const lengths = [29, 27, 30, 28];
+  const lengths = [28, 31, 29, 27, 30, 28]; // about six months
   const starts: ISODate[] = [];
   let s = addDays(today, -(lengths.reduce((a, b) => a + b, 0) + 1));
   for (const l of lengths) {

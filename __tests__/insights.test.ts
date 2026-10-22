@@ -12,8 +12,8 @@ const demo = generateDemo(TODAY);
 const periods = detectPeriods(demo.periodDays, TODAY);
 
 describe('demo data', () => {
-  test('has three+ months and a current period starting yesterday', () => {
-    expect(periods.length).toBe(5);
+  test('has about six months and a current period starting yesterday', () => {
+    expect(periods.length).toBe(7);
     const status = getCycleStatus({ periodDays: demo.periodDays, profile: demo.profile, today: TODAY });
     expect(status.cycleDay).toBe(2);
     expect(status.phase).toBe('menstrual');
@@ -103,8 +103,10 @@ describe('personalization', () => {
     for (const x of c) expect(x.detail).not.toMatch(/cure|will stop/i);
   });
   test('things that helped before come first', () => {
-    const c = comfortPath({ regions: ['lower_abdomen'], intensity: 5, qualities: [] }, ['breathing']);
+    const past = { ...demo.pain[0], regions: ['lower_abdomen' as const], tried: ['breathing'], helped: ['breathing'] };
+    const c = comfortPath({ regions: ['lower_abdomen'], intensity: 5, qualities: [] }, [past, { ...past, id: 'p2' }]);
     expect(c[0].id).toBe('breathing');
+    expect(c[0].note).toBe('Helped you 2 of 2 times');
   });
   test('gentle plan has no guilt language', () => {
     const plan = gentlePlan({ mood: 'exhausted', bodyScore: 2, need: 'rest', painIntensity: 6, phase: 'menstrual' });

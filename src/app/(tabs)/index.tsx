@@ -49,6 +49,7 @@ export default function Home() {
         energy: log?.energy ?? null,
         appetite: null,
         favorites: favorites.map((f) => f.id),
+        phase: status.phase,
       })[0],
     [profile, log, status.phase, favorites],
   );

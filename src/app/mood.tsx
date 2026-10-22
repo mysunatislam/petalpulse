@@ -6,7 +6,9 @@ import { MicButton } from '../components/MicButton';
 import { Button, Card, Chip, ChipGroup, Gap, Notice, Row, Screen, SectionTitle, T, tap } from '../components/ui';
 import { MoodFace, MoodPicker, MOOD_STYLE } from '../components/Mood';
 import { useApp } from '../store/app';
-import { useInsights, useToday } from '../store/derived';
+import { useCycle, useInsights, useToday } from '../store/derived';
+import { moodMirror } from '../engines/patterns';
+import { MoodMirrorCard } from '../components/MoodMirrorCard';
 import { suggestThemes } from '../engines/personalization';
 import { screenText } from '../engines/safety';
 import { addDays, formatShort, uid } from '../lib/dates';
@@ -24,6 +26,8 @@ export default function MoodMirror() {
   const moods = useApp((s) => s.moods);
   const consent = useApp((s) => s.settings.journalThemeConsent);
   const { visible } = useInsights();
+  const { periods } = useCycle();
+  const mirror = useMemo(() => moodMirror(moods, periods), [moods, periods]);
   const [mood, setMood] = useState<Mood | null>(null);
   const [intensity, setIntensity] = useState(3);
   const [tags, setTags] = useState<MoodTag[]>([]);
@@ -170,6 +174,13 @@ export default function MoodMirror() {
           </>
         )}
       </Card>
+
+      {mirror && (
+        <>
+          <Gap h={16} />
+          <MoodMirrorCard mirror={mirror} />
+        </>
+      )}
 
       {moodInsights.length > 0 && (
         <>

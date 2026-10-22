@@ -8,6 +8,7 @@
 import { diffDays, ISODate } from '../lib/dates';
 import type { DayLog, Mood, MoodEntry, PainEpisode } from '../data/types';
 import { cycleDayFor, Period } from './cycle';
+import { multiCycleInsights } from './patterns';
 
 export type InsightKind =
   | 'pain_bleeding'
@@ -15,7 +16,12 @@ export type InsightKind =
   | 'energy_premenstrual'
   | 'sleep_energy'
   | 'stress_sleep'
-  | 'pain_impact';
+  | 'pain_impact'
+  | 'cycle_variability'
+  | 'cycle_shift'
+  | 'period_length'
+  | 'symptom_recurring'
+  | 'pain_trend';
 
 export interface Insight {
   id: string;
@@ -220,7 +226,10 @@ export function stressAndSleep({ dayLogs, moods }: InsightInput): Insight | null
 export function generateInsights(input: InsightInput, dismissed: Set<string> = new Set()): Insight[] {
   const all = [painAroundBleeding, moodBeforePeriod, energyBeforePeriod, sleepAndEnergy, stressAndSleep]
     .map((f) => f(input))
-    .filter((x): x is Insight => x !== null);
+    .filter((x): x is Insight => x !== null)
+    .concat(multiCycleInsights(input));
+  // A worsening-pain trend matters more than any other pattern, so it goes first.
+  all.sort((a, b) => Number(b.kind === 'pain_trend') - Number(a.kind === 'pain_trend'));
   return all.filter((i) => !dismissed.has(i.id));
 }
 

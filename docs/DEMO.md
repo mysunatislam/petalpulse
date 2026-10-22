@@ -18,4 +18,13 @@ Tips for a live demo:
 
 - Use a real Android device with a development build so haptics, the encrypted database and PDF sharing all work.
 - Turn on dark mode on the phone to show the night theme.
-- Switch the language to বাংলা in Settings to show Bangla onboarding and replies (detail screens are still partly English).
+- Switch the language to বাংলা in Settings to show every screen and Petal's replies in Bangla.
+
+## Stage 2 tour (about two minutes)
+
+1. **Insights → What we've noticed.** New multi-cycle cards, for example "Early in your period, you often log tiredness" and "Before your period, you often log cravings". Tap "How did we find this?" to show the evidence.
+2. **Insights → The last six months.** Cycle lengths 27–31 days, five bleeding days, days with pain by month and a cycle-by-cycle list. Tap "PDF for a clinician" and keep "Changes over time" on.
+3. **My Care → Mood Mirror.** The days before Mira's period are her hardest (about three in four check-ins), the week after her easiest.
+4. **Log pain → Comfort Path.** Gentle warmth comes first with "Helped you … times"; positioning, which Mira often tried but never marked as helping, sinks to the bottom.
+5. **Nourish Me.** The focus card says "iron and warmth" during her period; iron-rich meals show a lemon or guava pairing tip.
+6. **Petal AI in Bangla.** Switch the language to বাংলা and type `amar pet e onek betha` (Banglish) or `আমার পেট খুব ব্যথা করছে।`. Petal answers in Bangla and mentions Mira's cramp pattern in Bangla.
