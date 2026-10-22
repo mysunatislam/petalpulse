@@ -19,8 +19,9 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '../theme/useTheme';
-import { fonts, radius } from '../theme/tokens';
+import { BANGLA_FONT, fonts, hasBangla, radius } from '../theme/tokens';
 import { useApp } from '../store/app';
+import { localize, localizeNode } from '../i18n';
 
 export function tap(kind: 'light' | 'success' | 'select' = 'light') {
   if (!useApp.getState().settings.haptics) return;
@@ -62,12 +63,21 @@ export function T({
   ...rest
 }: TextProps & { v?: Variant; muted?: boolean; soft?: boolean; color?: string; center?: boolean }) {
   const t = useTheme();
+  const lang = useApp((st) => st.settings.language);
+  const children = localizeNode(lang, rest.children);
+  const flat = StyleSheet.flatten([VARIANT[v], style]) ?? {};
+  // Bengali script needs more vertical room for its vowel signs, and no letter-spacing or uppercase.
+  const bangla = hasBangla(children)
+    ? { fontFamily: BANGLA_FONT[flat.fontFamily as string] ?? fonts.bn, lineHeight: Math.round((flat.fontSize ?? 15) * 1.6), letterSpacing: 0, textTransform: 'none' as const }
+    : null;
   return (
     <Text
       maxFontSizeMultiplier={1.8}
       {...rest}
-      style={[VARIANT[v], { color: color ?? (muted ? t.textMuted : soft ? t.textSoft : t.text) }, center && { textAlign: 'center' }, style]}
-    />
+      style={[VARIANT[v], { color: color ?? (muted ? t.textMuted : soft ? t.textSoft : t.text) }, center && { textAlign: 'center' }, style, bangla]}
+    >
+      {children}
+    </Text>
   );
 }
 
@@ -275,10 +285,10 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
-        <Text maxFontSizeMultiplier={1.6} style={[small ? VARIANT.label : VARIANT.bodyMedium, { color: fg, textAlign: 'center' }]}>
+        <T maxFontSizeMultiplier={1.6} style={[small ? VARIANT.label : VARIANT.bodyMedium, { textAlign: 'center' }]} color={fg}>
           {icon ? `${icon}  ` : ''}
           {title}
-        </Text>
+        </T>
       )}
     </Pressable>
   );
@@ -326,7 +336,7 @@ export function Chip({
       }}
       accessibilityRole={onPress ? 'checkbox' : 'text'}
       accessibilityState={onPress ? { checked: !!selected } : undefined}
-      accessibilityLabel={label}
+      accessibilityLabel={localize(useApp.getState().settings.language, label)}
       style={({ pressed }) => [
         styles.chip,
         {
@@ -337,10 +347,10 @@ export function Chip({
         style,
       ]}
     >
-      <Text maxFontSizeMultiplier={1.6} style={[VARIANT.label, { color: selected ? (color ? t.text : t.accentText) : t.text }]}>
+      <T maxFontSizeMultiplier={1.6} style={VARIANT.label} color={selected ? (color ? t.text : t.accentText) : t.text}>
         {icon ? `${icon} ` : ''}
         {label}
-      </Text>
+      </T>
     </Pressable>
   );
 }
@@ -397,9 +407,9 @@ export function Segmented<V extends string>({ options, value, onChange }: { opti
             }}
             style={[styles.segItem, on && { backgroundColor: t.accent }]}
           >
-            <Text maxFontSizeMultiplier={1.5} style={[VARIANT.label, { color: on ? t.accentText : t.textMuted, textAlign: 'center' }]}>
+            <T maxFontSizeMultiplier={1.5} style={[VARIANT.label, { textAlign: 'center' }]} color={on ? t.accentText : t.textMuted}>
               {o.label}
-            </Text>
+            </T>
           </Pressable>
         );
       })}
@@ -413,7 +423,7 @@ export function Toggle({ label, detail, value, onChange }: { label: string; deta
     <Pressable
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
-      accessibilityLabel={label}
+      accessibilityLabel={localize(useApp.getState().settings.language, label)}
       accessibilityHint={detail}
       onPress={() => {
         tap('select');

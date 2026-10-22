@@ -11,7 +11,7 @@ This is the **Stage 1 MVP**. See [docs/STATUS.md](docs/STATUS.md) for what is fi
 ```bash
 npm install
 npx expo start          # press "a" for an Android device/emulator, "w" for the web preview
-npm test                # 91 unit + accessibility tests
+npm test                # 120 unit + accessibility tests
 npm run typecheck
 npx eslint .
 ```

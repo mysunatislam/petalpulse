@@ -16,7 +16,8 @@ import {
   Settings,
 } from '../data/types';
 import { generateDemo } from '../data/demo';
-import { todayISO, ISODate } from '../lib/dates';
+import { forgetToken } from '../lib/aiToken';
+import { todayISO, ISODate, setDateLanguage } from '../lib/dates';
 
 let factory: () => StorageBackend = createBackend;
 let backend: StorageBackend | null = null;
@@ -248,7 +249,9 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   async deleteEverything() {
+    const endpoint = get().settings.aiEndpoint;
     await db().wipe();
+    if (endpoint) await forgetToken(endpoint);
     backend = factory(); // fresh backend (and on native a fresh encryption key)
     set({
       profile: DEFAULT_PROFILE,
@@ -265,3 +268,6 @@ export const useApp = create<AppState>((set, get) => ({
     await db().init();
   },
 }));
+
+// Dates and numbers follow the chosen language.
+useApp.subscribe((s) => setDateLanguage(s.settings.language));

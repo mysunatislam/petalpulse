@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useLocalize } from '../../i18n';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,10 +8,12 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import * as Speech from 'expo-speech';
 import { Button, Card, Chip, DemoBanner, Gap, IconButton, Notice, Row, T, tap } from '../../components/ui';
 import { PetalBloom } from '../../components/PetalCompass';
+import { MicButton } from '../../components/MicButton';
 import { useApp } from '../../store/app';
 import { useCycle, useInsights } from '../../store/derived';
 import { AI_DISCLOSURE, buildContext, respond } from '../../engines/conversation';
-import { describeSharing } from '../../engines/privacy';
+import { cloudAllowed, describeSharing } from '../../engines/privacy';
+import { tokenGetter } from '../../lib/aiToken';
 import { uid } from '../../lib/dates';
 import { useMotionOff, useTheme } from '../../theme/useTheme';
 import { fonts } from '../../theme/tokens';
@@ -41,6 +44,7 @@ const ACTIONS: Record<string, string> = {
 };
 
 export default function PetalAI() {
+  const L = useLocalize();
   const t = useTheme();
   const motionOff = useMotionOff();
   const s = useApp();
@@ -50,6 +54,7 @@ export default function PetalAI() {
   const [busy, setBusy] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [suggestQuiet, setSuggestQuiet] = useState(false);
+  const [voiceNote, setVoiceNote] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const { settings, chat } = s;
 
@@ -71,12 +76,14 @@ export default function PetalAI() {
   }, [chat.length, motionOff]);
 
   const send = async (raw: string) => {
-    const msg = raw.trim();
-    if (!msg || busy) return;
-    if (ACTIONS[msg]) {
-      router.push(ACTIONS[msg] as never);
+    const key = raw.trim();
+    if (!key || busy) return;
+    if (ACTIONS[key]) {
+      router.push(ACTIONS[key] as never);
       return;
     }
+    // Starters and chips are written in English; send them in the language the person sees.
+    const msg = STARTERS.includes(key) || chips.includes(key) ? L(key) : key;
     tap();
     setText('');
     const user: ChatMessage = { id: uid('m'), createdAt: new Date().toISOString(), role: 'user', text: msg };
@@ -84,7 +91,11 @@ export default function PetalAI() {
     setBusy(true);
     if (/overwhelm/i.test(msg) && settings.careMode !== 'quiet') setSuggestQuiet(true);
     const history = useApp.getState().chat;
-    const reply = await respond(msg, history, ctx, { settings });
+    const cloud = cloudAllowed(settings, s.profile.ageRange);
+    const reply = await respond(msg, history, ctx, {
+      settings: { ...settings, aiCloudConsent: cloud },
+      getToken: cloud && settings.aiEndpoint ? tokenGetter(settings.aiEndpoint) : undefined,
+    });
     // a small pause so replies don't feel mechanical
     await new Promise((r) => setTimeout(r, reply.source === 'device' ? 500 : 0));
     const bot: ChatMessage = { id: uid('m'), createdAt: new Date().toISOString(), role: 'assistant', text: reply.text, safety: reply.safety, suggestions: reply.suggestions };
@@ -123,7 +134,7 @@ export default function PetalAI() {
           <View style={{ flex: 1, marginLeft: 10 }}>
             <T v="h3">Petal</T>
             <T v="small" muted>
-              AI companion · {settings.aiCloudConsent && settings.aiEndpoint ? 'cloud, with your consent' : 'on this phone'}
+              AI companion · {cloudAllowed(settings, s.profile.ageRange) && settings.aiEndpoint ? 'cloud, with your consent' : 'on this phone'}
             </T>
           </View>
           <IconButton label="What Petal can see" onPress={() => setShowInfo(!showInfo)}>
@@ -207,11 +218,19 @@ export default function PetalAI() {
               ))}
             </Row>
           )}
+          {voiceNote && (
+            <View style={{ paddingHorizontal: 18, paddingBottom: 8 }}>
+              <Notice tone="calm" action="OK" onAction={() => setVoiceNote(null)}>
+                {voiceNote}
+              </Notice>
+            </View>
+          )}
           <Row style={[styles.inputRow, { borderColor: t.border, backgroundColor: t.surface }]}>
+            <MicButton value={text} onText={setText} onNotice={setVoiceNote} />
             <TextInput
               value={text}
               onChangeText={setText}
-              placeholder="Tell Petal what’s on your mind…"
+              placeholder={L('Tell Petal what’s on your mind…')}
               placeholderTextColor={t.textSoft}
               multiline
               accessibilityLabel="Message to Petal"

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MicButton } from '../components/MicButton';
 import { Button, Card, Chip, ChipGroup, Gap, Notice, Row, Screen, SectionTitle, T, tap } from '../components/ui';
 import { MoodFace, MoodPicker, MOOD_STYLE } from '../components/Mood';
 import { useApp } from '../store/app';
@@ -10,12 +11,13 @@ import { suggestThemes } from '../engines/personalization';
 import { screenText } from '../engines/safety';
 import { addDays, formatShort, uid } from '../lib/dates';
 import { TAG_LABEL } from '../lib/labels';
-import { useT } from '../i18n';
+import { useT, useLocalize } from '../i18n';
 import { useTheme } from '../theme/useTheme';
 import { fonts } from '../theme/tokens';
 import type { Mood, MoodTag } from '../data/types';
 
 export default function MoodMirror() {
+  const L = useLocalize();
   const t = useTheme();
   const tr = useT();
   const today = useToday();
@@ -29,6 +31,7 @@ export default function MoodMirror() {
   const [themes, setThemes] = useState<string[] | null>(null);
   const [confirmed, setConfirmed] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const [voiceNote, setVoiceNote] = useState<string | null>(null);
   const risk = text.length > 8 ? screenText(text) : 'none';
 
   const last14 = useMemo(() => {
@@ -102,7 +105,25 @@ export default function MoodMirror() {
             <Gap h={8} />
             <ChipGroup multi options={(Object.keys(TAG_LABEL) as MoodTag[]).map((k) => ({ value: k, label: TAG_LABEL[k] }))} value={tags} onChange={(v) => setTags(v as MoodTag[])} />
             <Gap h={14} />
-            <T v="label">Write it out (optional)</T>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <T v="label">Write it out (optional)</T>
+              <MicButton
+                value={text}
+                onText={(v) => {
+                  setText(v);
+                  setThemes(null);
+                }}
+                onNotice={setVoiceNote}
+              />
+            </Row>
+            {voiceNote && (
+              <>
+                <Gap h={8} />
+                <Notice tone="calm" action="OK" onAction={() => setVoiceNote(null)}>
+                  {voiceNote}
+                </Notice>
+              </>
+            )}
             <Gap h={8} />
             <TextInput
               value={text}
@@ -111,7 +132,7 @@ export default function MoodMirror() {
                 setThemes(null);
               }}
               multiline
-              placeholder="No rules. A word, a sentence, or a page."
+              placeholder={L('No rules. A word, a sentence, or a page.')}
               placeholderTextColor={t.textSoft}
               accessibilityLabel="Journal entry"
               style={{ minHeight: 110, borderRadius: 20, borderWidth: 1, borderColor: t.border, backgroundColor: t.bg, padding: 16, color: t.text, fontFamily: fonts.serifItalic, fontSize: 16, lineHeight: 23, textAlignVertical: 'top' }}

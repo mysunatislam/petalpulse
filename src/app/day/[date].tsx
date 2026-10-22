@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TextInput, View } from 'react-native';
+import { useLocalize } from '../../i18n';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Button, Card, ChipGroup, Gap, Notice, Row, Screen, SectionTitle, Stepper, T, tap } from '../../components/ui';
 import { useApp } from '../../store/app';
@@ -12,6 +13,7 @@ import { fonts } from '../../theme/tokens';
 const FLOWS: (Flow | 'none')[] = ['none', 'spotting', 'light', 'medium', 'heavy', 'very_heavy'];
 
 export default function DayScreen() {
+  const L = useLocalize();
   const t = useTheme();
   const { date: raw } = useLocalSearchParams<{ date: string }>();
   const date = isValidISODate(raw) ? raw : todayISO();
@@ -138,7 +140,7 @@ export default function DayScreen() {
         value={log.notes}
         onChangeText={(notes) => set({ notes })}
         multiline
-        placeholder="Anything you want to remember about today"
+        placeholder={L('Anything you want to remember about today')}
         placeholderTextColor={t.textSoft}
         accessibilityLabel="Notes"
         style={{ minHeight: 100, borderRadius: 20, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceGlass, padding: 16, color: t.text, fontFamily: fonts.sans, fontSize: 15, textAlignVertical: 'top' }}

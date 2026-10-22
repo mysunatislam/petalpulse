@@ -7,6 +7,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Fraunces_400Regular_Italic, Fraunces_500Medium, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { NotoSansBengali_400Regular, NotoSansBengali_500Medium, NotoSansBengali_600SemiBold } from '@expo-google-fonts/noto-sans-bengali';
+import { NotoSerifBengali_600SemiBold } from '@expo-google-fonts/noto-serif-bengali';
 import { useApp } from '../store/app';
 import { useTheme } from '../theme/useTheme';
 import { LockScreen } from '../components/LockScreen';
@@ -21,6 +23,10 @@ export default function RootLayout() {
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
+    NotoSansBengali_400Regular,
+    NotoSansBengali_500Medium,
+    NotoSansBengali_600SemiBold,
+    NotoSerifBengali_600SemiBold,
   });
   const ready = useApp((s) => s.ready);
   const unlocked = useApp((s) => s.unlocked);

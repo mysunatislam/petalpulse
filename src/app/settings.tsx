@@ -4,16 +4,19 @@ import { router } from 'expo-router';
 import { Button, Card, ChipGroup, Gap, ListItem, Notice, Row, Screen, SectionTitle, Segmented, Stepper, T, Toggle, tap } from '../components/ui';
 import { useApp } from '../store/app';
 import { useCycle } from '../store/derived';
-import { applyConsentChange, CONSENT_COPY, ConsentKey, DATA_PROMISES, describeSharing, isMinor, validatePin } from '../engines/privacy';
+import { applyConsentChange, CONSENT_COPY, ConsentKey, DATA_PROMISES, describeSharing, isMinor, needsGuardian, validatePin, withdrawGuardianConsent } from '../engines/privacy';
+import { VOICE_COPY } from '../engines/voice';
 import { biometricAvailable, clearPin, setPin } from '../lib/secure';
 import { shareJson } from '../lib/share';
 import { requestPermission, syncNotifications } from '../lib/notifications';
-import { useT } from '../i18n';
+import { useT, useLocalize } from '../i18n';
 import { useTheme } from '../theme/useTheme';
 import { fonts } from '../theme/tokens';
+import { formatShort } from '../lib/dates';
 import type { Allergy, DietPref, NotificationStyle, PredictionCaveat, Profile, Settings } from '../data/types';
 
 export default function SettingsScreen() {
+  const L = useLocalize();
   const t = useTheme();
   const tr = useT();
   const s = useApp();
@@ -36,7 +39,10 @@ export default function SettingsScreen() {
     const next = useApp.getState().settings;
     syncNotifications(next, status).catch(() => {});
   };
-  const consent = (key: ConsentKey | 'aiEnabled', v: boolean) => s.updateSettings(applyConsentChange(settings, key, v));
+  const consent = (key: ConsentKey | 'aiEnabled', v: boolean) => {
+    if (key === 'aiCloudConsent' && v && needsGuardian(settings, profile.ageRange)) return router.push('/guardian');
+    return s.updateSettings(applyConsentChange(settings, key, v, profile.ageRange));
+  };
   const prof = (p: Partial<Profile>) => s.updateProfile(p);
   const inputStyle = { minHeight: 48, borderRadius: 16, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceGlass, paddingHorizontal: 14, color: t.text, fontFamily: fonts.sans, fontSize: 15 } as const;
 
@@ -70,7 +76,7 @@ export default function SettingsScreen() {
       <Card>
         <T v="label">Preferred name</T>
         <Gap h={6} />
-        <TextInput value={profile.name} onChangeText={(name) => prof({ name: name.slice(0, 40) })} placeholder="Optional" placeholderTextColor={t.textSoft} style={inputStyle} accessibilityLabel="Preferred name" />
+        <TextInput value={profile.name} onChangeText={(name) => prof({ name: name.slice(0, 40) })} placeholder={L('Optional')} placeholderTextColor={t.textSoft} style={inputStyle} accessibilityLabel="Preferred name" />
         <Gap h={14} />
         <T v="label">Typical cycle length</T>
         <Gap h={6} />
@@ -166,8 +172,15 @@ export default function SettingsScreen() {
             {(Object.keys(CONSENT_COPY) as ConsentKey[]).map((k) => (
               <Toggle key={k} label={CONSENT_COPY[k].title} detail={CONSENT_COPY[k].detail} value={settings[k]} onChange={(v) => consent(k, v)} />
             ))}
-            {isMinor(profile.ageRange) && settings.aiCloudConsent && (
-              <Notice tone="warn">You told us you’re under 18. Please check with a parent or guardian before using cloud AI.</Notice>
+            {isMinor(profile.ageRange) && settings.aiCloudConsent && !settings.guardianConsent && (
+              <Notice tone="warn" action="Ask a parent or guardian" onAction={() => router.push('/guardian')}>
+                You told us you’re under 18, so cloud AI is paused until a parent or guardian agrees.
+              </Notice>
+            )}
+            {settings.guardianConsent && (
+              <Notice tone="calm" action="Withdraw agreement" onAction={() => s.updateSettings(withdrawGuardianConsent(settings))}>
+                {`${L('Cloud AI agreed by')} ${settings.guardianConsent.name} (${L(settings.guardianConsent.relation)}), ${formatShort(settings.guardianConsent.at.slice(0, 10))}.`}
+              </Notice>
             )}
             {settings.aiCloudConsent && (
               <>
@@ -195,6 +208,7 @@ export default function SettingsScreen() {
             </Card>
           </>
         )}
+        <Toggle label={VOICE_COPY.networkToggle} detail={VOICE_COPY.networkDetail} value={settings.voiceAllowNetwork} onChange={(v) => upd({ voiceAllowNetwork: v })} />
       </Card>
 
       {/* Security */}

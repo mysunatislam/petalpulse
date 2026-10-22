@@ -111,6 +111,10 @@ export interface Settings {
   aiSpeak: boolean;
   aiEndpoint: string;
   appLock: 'off' | 'pin' | 'biometric';
+  /** Speech-to-text may use the phone's online recognizer when offline recognition isn't available. */
+  voiceAllowNetwork: boolean;
+  /** Under-18s need a parent or guardian's agreement before cloud AI can be turned on. */
+  guardianConsent: { name: string; relation: string; at: string } | null;
 }
 
 export interface PeriodDay {
@@ -217,6 +221,8 @@ export const DEFAULT_SETTINGS: Settings = {
   aiResponseLength: 'medium',
   aiSpeak: false,
   aiEndpoint: '',
+  voiceAllowNetwork: false,
+  guardianConsent: null,
   appLock: 'off',
 };
 

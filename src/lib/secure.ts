@@ -78,3 +78,8 @@ export async function biometricUnlock(): Promise<boolean> {
     return false;
   }
 }
+
+/* Small keystore helpers for other secrets (e.g. the AI backend token). */
+export const getSecret = (k: string) => getItem(k);
+export const setSecret = (k: string, v: string) => setItem(k, v);
+export const delSecret = (k: string) => delItem(k);

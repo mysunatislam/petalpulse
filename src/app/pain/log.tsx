@@ -10,11 +10,12 @@ import { useToday } from '../../store/derived';
 import type { BodyRegion, DailyImpact, PainEpisode, PainOnset, PainPattern, PainQuality, Symptom } from '../../data/types';
 import { IMPACT_LABEL, ONSET_LABEL, PATTERN_LABEL, QUALITY_LABEL } from '../../lib/labels';
 import { uid } from '../../lib/dates';
-import { useT } from '../../i18n';
+import { useT, useLocalize } from '../../i18n';
 import { useMotionOff, useTheme } from '../../theme/useTheme';
 import { fonts } from '../../theme/tokens';
 
 export default function PainLog() {
+  const L = useLocalize();
   const t = useTheme();
   const tr = useT();
   const today = useToday();
@@ -80,7 +81,7 @@ export default function PainLog() {
           </Card>
           <Gap h={20} />
           <Row style={{ gap: 10 }}>
-            <Button kind="ghost" title="Back" onPress={() => setStep(0)} style={{ flex: 1 }} />
+            <Button kind="ghost" title="Previous" onPress={() => setStep(0)} style={{ flex: 1 }} />
             <Button title="Continue" disabled={intensity === null} onPress={() => setStep(2)} style={{ flex: 2 }} />
           </Row>
         </Animated.View>
@@ -142,7 +143,7 @@ export default function PainLog() {
               value={notes}
               onChangeText={setNotes}
               multiline
-              placeholder="Anything else worth remembering"
+              placeholder={L('Anything else worth remembering')}
               placeholderTextColor={t.textSoft}
               accessibilityLabel="Pain notes"
               style={{ minHeight: 80, borderRadius: 18, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceGlass, padding: 14, color: t.text, fontFamily: fonts.sans, fontSize: 15, textAlignVertical: 'top' }}
@@ -158,7 +159,7 @@ export default function PainLog() {
           )}
           <Gap h={20} />
           <Row style={{ gap: 10 }}>
-            <Button kind="ghost" title="Back" onPress={() => setStep(1)} style={{ flex: 1 }} />
+            <Button kind="ghost" title="Previous" onPress={() => setStep(1)} style={{ flex: 1 }} />
             <Button title="Save & see comfort ideas" onPress={save} style={{ flex: 2 }} />
           </Row>
         </Animated.View>

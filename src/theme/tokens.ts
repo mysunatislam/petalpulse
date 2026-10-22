@@ -111,4 +111,26 @@ export const fonts = {
   sans: 'Inter_400Regular',
   sansMedium: 'Inter_500Medium',
   sansSemi: 'Inter_600SemiBold',
+  bnSerif: 'NotoSerifBengali_600SemiBold',
+  bn: 'NotoSansBengali_400Regular',
+  bnMedium: 'NotoSansBengali_500Medium',
+  bnSemi: 'NotoSansBengali_600SemiBold',
 };
+
+/** Fraunces and Inter have no Bengali glyphs, so Bangla text swaps to the matching Noto family. */
+export const BANGLA_FONT: Record<string, string> = {
+  [fonts.serif]: fonts.bnSerif,
+  [fonts.serifBold]: fonts.bnSerif,
+  [fonts.serifItalic]: fonts.bnSerif,
+  [fonts.sans]: fonts.bn,
+  [fonts.sansMedium]: fonts.bnMedium,
+  [fonts.sansSemi]: fonts.bnSemi,
+};
+
+const BENGALI = /[\u0980-\u09FF]/;
+
+export function hasBangla(node: unknown): boolean {
+  if (typeof node === 'string') return BENGALI.test(node);
+  if (Array.isArray(node)) return node.some(hasBangla);
+  return false;
+}

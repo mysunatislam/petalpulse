@@ -138,7 +138,7 @@ export default function CheckIn() {
           />
           <Gap h={20} />
           <Row style={{ gap: 10 }}>
-            <Button kind="ghost" title="Back" onPress={() => setStep(0)} style={{ flex: 1 }} />
+            <Button kind="ghost" title="Previous" onPress={() => setStep(0)} style={{ flex: 1 }} />
             <Button title={tr('common.continue')} onPress={() => setStep(2)} style={{ flex: 2 }} />
           </Row>
         </Animated.View>
@@ -165,7 +165,7 @@ export default function CheckIn() {
           </View>
           <Gap h={20} />
           <Row style={{ gap: 10 }}>
-            <Button kind="ghost" title="Back" onPress={() => setStep(1)} style={{ flex: 1 }} />
+            <Button kind="ghost" title="Previous" onPress={() => setStep(1)} style={{ flex: 1 }} />
             <Button title="Make my gentle plan" onPress={finish} style={{ flex: 2 }} />
           </Row>
         </Animated.View>

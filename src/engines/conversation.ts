@@ -294,6 +294,8 @@ export interface RespondOptions {
   settings: Pick<Settings, 'aiCloudConsent' | 'aiEndpoint' | 'aiResponseLength' | 'aiMemory'>;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /** Per-install token for the backend. `refresh` asks for a new one after a 401. */
+  getToken?: (refresh: boolean) => Promise<string | null>;
 }
 
 export async function respond(text: string, history: ChatMessage[], ctx: CompanionContext, opts: RespondOptions): Promise<CompanionReply> {
@@ -308,18 +310,21 @@ export async function respond(text: string, history: ChatMessage[], ctx: Compani
       const f = opts.fetchImpl ?? fetch;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 20000);
-      const res = await f(`${settings.aiEndpoint.replace(/\/$/, '')}/v1/companion`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: trimmed,
-          // Without memory consent only the current exchange is sent.
-          history: settings.aiMemory ? history.slice(-12).map((m) => ({ role: m.role, text: m.text })) : [],
-          context: ctx,
-          length: settings.aiResponseLength,
-        }),
-        signal: controller.signal,
-      });
+      const call = (token: string | null) =>
+        f(`${settings.aiEndpoint.replace(/\/$/, '')}/v1/companion`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({
+            message: trimmed,
+            // Without memory consent only the current exchange is sent.
+            history: settings.aiMemory ? history.slice(-12).map((m) => ({ role: m.role, text: m.text })) : [],
+            context: ctx,
+            length: settings.aiResponseLength,
+          }),
+          signal: controller.signal,
+        });
+      let res = await call((await opts.getToken?.(false)) ?? null);
+      if (res.status === 401 && opts.getToken) res = await call(await opts.getToken(true));
       clearTimeout(timer);
       if (res.ok) {
         const data = (await res.json()) as { text?: string; suggestions?: string[]; safety?: ChatMessage['safety'] };
