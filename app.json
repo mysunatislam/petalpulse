@@ -1,25 +1,82 @@
 {
   "expo": {
-    "name": "petal-and-pulse",
+    "name": "Petal & Pulse",
     "slug": "petal-and-pulse",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.petalpulse.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Unlock your private Petal & Pulse space."
+      }
     },
     "android": {
+      "package": "com.petalpulse.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F7DCE5",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "allowBackup": false,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ],
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-font",
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFF9F5",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Unlock your private Petal & Pulse space."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#D992AA"
+        }
+      ],
+      "expo-asset"
+    ],
+    "scheme": "petalpulse",
+    "backgroundColor": "#FFF9F5",
+    "description": "An AI-powered menstrual, emotional and personalized wellness companion.",
+    "experiments": {
+      "typedRoutes": false
     }
   }
 }

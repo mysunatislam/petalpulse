@@ -1,0 +1,253 @@
+import type { Allergy, DietPref } from './types';
+
+export type MealTag = 'iron' | 'protein' | 'fiber' | 'calcium' | 'magnesium' | 'hydrating' | 'easy' | 'warm' | 'light' | 'omega3' | 'vitamin_c';
+
+export interface Meal {
+  id: string;
+  name: string;
+  nameBn?: string;
+  region: 'bangladeshi' | 'international';
+  emoji: string;
+  palette: [string, string];
+  minutes: number;
+  ingredients: string[];
+  tags: MealTag[];
+  contains: { meat?: boolean; fish?: boolean; egg?: boolean; dairy?: boolean; nuts?: boolean; gluten?: boolean; soy?: boolean; nonHalal?: boolean };
+  why: string;
+  source: string;
+}
+
+/**
+ * Curated, non-restrictive meal ideas. "Why this may help" lines reference
+ * general nutrition guidance only — no hormone-balancing or cure claims.
+ */
+export const MEALS: Meal[] = [
+  {
+    id: 'masoor_dal_rice',
+    name: 'Masoor dal with rice & lemon',
+    nameBn: 'মসুর ডাল, ভাত ও লেবু',
+    region: 'bangladeshi',
+    emoji: '🍲',
+    palette: ['#FFDCCB', '#F7DCE5'],
+    minutes: 30,
+    ingredients: ['Red lentils', 'Rice', 'Onion, garlic, turmeric', 'A squeeze of lemon'],
+    tags: ['iron', 'protein', 'fiber', 'warm', 'easy', 'vitamin_c'],
+    contains: {},
+    why: 'Lentils provide plant iron and protein. Vitamin C from lemon helps the body absorb plant iron, which matters when you lose iron through menstrual bleeding.',
+    source: 'WHO & NHS guidance on iron-rich foods',
+  },
+  {
+    id: 'lal_shak_bhaji',
+    name: 'Lal shak bhaji with roti',
+    nameBn: 'লাল শাক ভাজি ও রুটি',
+    region: 'bangladeshi',
+    emoji: '🥬',
+    palette: ['#CADCCB', '#FFF9F5'],
+    minutes: 20,
+    ingredients: ['Red amaranth leaves', 'Garlic', 'Mustard oil', 'Atta roti'],
+    tags: ['iron', 'fiber', 'calcium', 'magnesium', 'easy'],
+    contains: { gluten: true },
+    why: 'Leafy greens like lal shak offer iron, calcium, magnesium and fibre. Pairing with a little fruit adds vitamin C for absorption.',
+    source: 'NHS Eat Well; Bangladesh dietary guidelines',
+  },
+  {
+    id: 'egg_bhuna',
+    name: 'Dim bhuna with rice & cucumber',
+    nameBn: 'ডিম ভুনা, ভাত ও শসা',
+    region: 'bangladeshi',
+    emoji: '🍳',
+    palette: ['#FFDCCB', '#FFF9F5'],
+    minutes: 25,
+    ingredients: ['Eggs', 'Onion & tomato', 'Spices', 'Rice', 'Cucumber slices'],
+    tags: ['protein', 'iron', 'easy', 'warm', 'hydrating'],
+    contains: { egg: true },
+    why: 'Eggs are an affordable source of protein and some iron, which can help keep you full and steady on low-energy days.',
+    source: 'NHS Eat Well guide',
+  },
+  {
+    id: 'rui_jhol',
+    name: 'Light rui fish jhol',
+    nameBn: 'রুই মাছের পাতলা ঝোল',
+    region: 'bangladeshi',
+    emoji: '🐟',
+    palette: ['#E9E1F8', '#FFF9F5'],
+    minutes: 35,
+    ingredients: ['Rui fish', 'Potato', 'Turmeric, cumin', 'Coriander', 'Rice'],
+    tags: ['protein', 'omega3', 'warm', 'hydrating', 'light'],
+    contains: { fish: true },
+    why: 'Fish gives protein and some omega-3 fats. A brothy jhol is gentle and hydrating if your appetite is low.',
+    source: 'NHS guidance on fish in a balanced diet',
+  },
+  {
+    id: 'khichuri',
+    name: 'Comforting moong khichuri',
+    nameBn: 'মুগ ডালের খিচুড়ি',
+    region: 'bangladeshi',
+    emoji: '🥣',
+    palette: ['#FFDCCB', '#E9E1F8'],
+    minutes: 30,
+    ingredients: ['Rice', 'Moong dal', 'Ginger', 'Seasonal vegetables', 'A little ghee (optional)'],
+    tags: ['protein', 'fiber', 'warm', 'easy', 'iron'],
+    contains: { dairy: true },
+    why: 'A warm one-pot meal combining grains and lentils for protein and steady energy, easy to eat when you feel unwell.',
+    source: 'General balanced-diet guidance',
+  },
+  {
+    id: 'doi_chira',
+    name: 'Doi chira with banana',
+    nameBn: 'দই চিড়া ও কলা',
+    region: 'bangladeshi',
+    emoji: '🍌',
+    palette: ['#FFF9F5', '#F7DCE5'],
+    minutes: 5,
+    ingredients: ['Flattened rice (chira)', 'Plain yogurt (doi)', 'Banana', 'A drizzle of molasses (optional)'],
+    tags: ['calcium', 'easy', 'light', 'magnesium'],
+    contains: { dairy: true },
+    why: 'Yogurt brings calcium and banana adds potassium and magnesium. No cooking needed for tired days.',
+    source: 'NHS guidance on calcium sources',
+  },
+  {
+    id: 'chola_muri',
+    name: 'Chola with cucumber & tomato',
+    nameBn: 'ছোলা, শসা ও টমেটো',
+    region: 'bangladeshi',
+    emoji: '🥗',
+    palette: ['#CADCCB', '#FFDCCB'],
+    minutes: 15,
+    ingredients: ['Boiled chickpeas', 'Cucumber', 'Tomato', 'Onion, green chilli, lemon'],
+    tags: ['iron', 'protein', 'fiber', 'vitamin_c', 'hydrating'],
+    contains: {},
+    why: 'Chickpeas offer plant protein, fibre and iron; the lemon and tomato add vitamin C to help absorption.',
+    source: 'WHO guidance on iron-rich plant foods',
+  },
+  {
+    id: 'peyara_snack',
+    name: 'Guava & peanut snack plate',
+    nameBn: 'পেয়ারা ও বাদাম',
+    region: 'bangladeshi',
+    emoji: '🍐',
+    palette: ['#CADCCB', '#FFF9F5'],
+    minutes: 3,
+    ingredients: ['Guava', 'Roasted peanuts', 'A pinch of black salt'],
+    tags: ['vitamin_c', 'magnesium', 'easy', 'fiber'],
+    contains: { nuts: true },
+    why: 'Guava is rich in vitamin C, and peanuts provide magnesium and healthy fats. A small, easy snack.',
+    source: 'General nutrition guidance',
+  },
+  {
+    id: 'oats_bowl',
+    name: 'Warm oats with seeds & berries',
+    region: 'international',
+    emoji: '🫐',
+    palette: ['#E9E1F8', '#F7DCE5'],
+    minutes: 10,
+    ingredients: ['Oats', 'Milk or fortified plant milk', 'Pumpkin seeds', 'Berries'],
+    tags: ['fiber', 'magnesium', 'iron', 'warm', 'easy'],
+    contains: { gluten: true, dairy: true },
+    why: 'Oats and pumpkin seeds provide fibre, magnesium and some iron. Warm food can feel soothing on crampy mornings.',
+    source: 'NHS Eat Well guide',
+  },
+  {
+    id: 'salmon_bowl',
+    name: 'Salmon, greens & quinoa bowl',
+    region: 'international',
+    emoji: '🍣',
+    palette: ['#FFDCCB', '#CADCCB'],
+    minutes: 25,
+    ingredients: ['Salmon', 'Quinoa', 'Spinach', 'Avocado', 'Lemon'],
+    tags: ['omega3', 'protein', 'iron', 'magnesium'],
+    contains: { fish: true },
+    why: 'A balanced plate with protein, omega-3 fats, and leafy greens for iron and magnesium.',
+    source: 'NHS guidance on oily fish',
+  },
+  {
+    id: 'lentil_soup',
+    name: 'Tomato & lentil soup',
+    region: 'international',
+    emoji: '🍅',
+    palette: ['#F7DCE5', '#FFDCCB'],
+    minutes: 30,
+    ingredients: ['Red lentils', 'Tomatoes', 'Carrot', 'Garlic', 'Cumin'],
+    tags: ['iron', 'protein', 'fiber', 'vitamin_c', 'warm', 'hydrating'],
+    contains: {},
+    why: 'Lentils give iron and protein; tomatoes add vitamin C. Soup helps with hydration too.',
+    source: 'WHO guidance on iron-rich plant foods',
+  },
+  {
+    id: 'tofu_stirfry',
+    name: 'Tofu & vegetable stir-fry',
+    region: 'international',
+    emoji: '🥢',
+    palette: ['#CADCCB', '#E9E1F8'],
+    minutes: 20,
+    ingredients: ['Firm tofu', 'Broccoli', 'Peppers', 'Rice or noodles', 'Sesame'],
+    tags: ['protein', 'calcium', 'iron', 'vitamin_c'],
+    contains: { soy: true },
+    why: 'Calcium-set tofu gives protein and calcium; broccoli and peppers add vitamin C.',
+    source: 'NHS guidance on calcium sources',
+  },
+  {
+    id: 'yogurt_parfait',
+    name: 'Yogurt, fruit & granola cup',
+    region: 'international',
+    emoji: '🍓',
+    palette: ['#F7DCE5', '#FFF9F5'],
+    minutes: 5,
+    ingredients: ['Plain yogurt', 'Seasonal fruit', 'Granola'],
+    tags: ['calcium', 'easy', 'light'],
+    contains: { dairy: true, gluten: true, nuts: true },
+    why: 'An easy source of calcium and protein when you don’t feel like cooking.',
+    source: 'NHS guidance on calcium sources',
+  },
+  {
+    id: 'ginger_tea',
+    name: 'Warm ginger & lemon water',
+    region: 'international',
+    emoji: '🫖',
+    palette: ['#FFF9F5', '#FFDCCB'],
+    minutes: 5,
+    ingredients: ['Fresh ginger', 'Hot water', 'Lemon', 'Honey (optional)'],
+    tags: ['hydrating', 'warm', 'easy', 'light'],
+    contains: {},
+    why: 'A warm drink helps with hydration. Some people find ginger settling when they feel queasy.',
+    source: 'General hydration guidance',
+  },
+  {
+    id: 'chicken_curry_light',
+    name: 'Light chicken curry with rice & salad',
+    nameBn: 'হালকা মুরগির তরকারি',
+    region: 'bangladeshi',
+    emoji: '🍛',
+    palette: ['#FFDCCB', '#F7DCE5'],
+    minutes: 40,
+    ingredients: ['Chicken', 'Onion, ginger, garlic', 'Potato', 'Rice', 'Cucumber & tomato salad'],
+    tags: ['protein', 'iron', 'warm'],
+    contains: { meat: true },
+    why: 'Chicken provides protein and well-absorbed (haem) iron, which can help replace iron lost during periods.',
+    source: 'NHS guidance on iron',
+  },
+  {
+    id: 'daab_pani',
+    name: 'Daab (tender coconut) water',
+    nameBn: 'ডাবের পানি',
+    region: 'bangladeshi',
+    emoji: '🥥',
+    palette: ['#CADCCB', '#FFF9F5'],
+    minutes: 1,
+    ingredients: ['Fresh tender coconut'],
+    tags: ['hydrating', 'easy', 'light', 'magnesium'],
+    contains: {},
+    why: 'A refreshing way to stay hydrated, with some potassium and magnesium.',
+    source: 'General hydration guidance',
+  },
+];
+
+export function mealAllowed(meal: Meal, diet: DietPref, allergies: Allergy[]): boolean {
+  const c = meal.contains;
+  if (diet === 'vegetarian' && (c.meat || c.fish)) return false;
+  if (diet === 'vegan' && (c.meat || c.fish || c.egg || c.dairy)) return false;
+  if (diet === 'pescatarian' && c.meat) return false;
+  if (diet === 'halal' && c.nonHalal) return false;
+  const map: Record<Allergy, keyof Meal['contains']> = { nuts: 'nuts', dairy: 'dairy', eggs: 'egg', gluten: 'gluten', fish: 'fish', soy: 'soy' };
+  return !allergies.some((a) => c[map[a]]);
+}

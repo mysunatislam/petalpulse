@@ -1,0 +1,21 @@
+{
+  "name": "petal-pulse-ai-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Protected backend for Petal AI. Holds the Claude API key; the app never does.",
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}
