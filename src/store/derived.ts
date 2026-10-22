@@ -26,14 +26,17 @@ export function useInsights() {
   const moods = useApp((s) => s.moods);
   const pain = useApp((s) => s.pain);
   const feedback = useApp((s) => s.insightFeedback);
+  const wearables = useApp((s) => s.wearables);
+  const wearOn = useApp((s) => s.settings.wearables.enabled);
   return useMemo(() => {
     const dismissed = new Set(feedback.filter((f) => f.status === 'dismissed').map((f) => f.id));
+    const input = { periods, dayLogs, moods, pain, wearables: wearOn ? wearables : [] };
     return {
-      visible: generateInsights({ periods, dayLogs, moods, pain }, dismissed),
-      all: generateInsights({ periods, dayLogs, moods, pain }),
+      visible: generateInsights(input, dismissed),
+      all: generateInsights(input),
       dismissed,
     };
-  }, [periods, dayLogs, moods, pain, feedback]);
+  }, [periods, dayLogs, moods, pain, feedback, wearables, wearOn]);
 }
 
 export function useTodayEntries() {

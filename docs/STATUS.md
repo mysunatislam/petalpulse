@@ -1,10 +1,10 @@
-# Status: Stage 1 MVP and Stage 2
+# Status: Stage 1 MVP, Stage 2 and Stage 3
 
 Last updated 22 October 2026.
 
 ## Finished and tested
 
-- **Project**: Expo SDK 58, TypeScript, Expo Router, Reanimated, Android-first config (`com.petalpulse.app`, no cloud backup, blocked location/ad-ID permissions). Typecheck, lint and 162 tests pass.
+- **Project**: Expo SDK 58, TypeScript, Expo Router, Reanimated, Android-first config (`com.petalpulse.app`, no cloud backup, blocked location/ad-ID permissions). Typecheck, lint and 201 tests pass.
 - **Design**: spec palette, Fraunces + Inter (Noto Serif/Sans Bengali for Bangla), light and dark themes, the animated **Petal Compass** with phase colours, reduce-motion support.
 - **App icon and splash**: drawn from the Petal Compass, with Android adaptive and monochrome (themed) layers. Sources in `assets/brand/`.
 - **Bangla**: every screen, button, chip, placeholder, accessibility label, date and number, plus safety messages, phase copy and comfort ideas, through a phrasebook (`src/i18n/phrases.ts`) with the Noto Bengali fonts.
@@ -34,26 +34,37 @@ Last updated 22 October 2026.
 - **Longitudinal reporting**: "The last six months" in Insights (cycle-length range, bleeding days, pain direction, days with pain by month, cycle by cycle), and a "Changes over time" section in the clinician PDF with tables and a printable chart. The export now offers 12 months too.
 - **Bangla conversation**: the on-device companion understands every topic in Bangla script and Banglish and answers in Bangla, with Bangla numbers, dates and pattern mentions. Crisis and urgent screening also covers Bangla and Banglish phrases, and safety messages go back in Bangla.
 
+## Stage 3: Research and accessibility (finished and tested, with the limits below)
+
+- **Wearables** (`src/engines/wearables.ts`, `src/lib/healthConnect.native.ts`, Settings → More tools → Wearables): read-only Health Connect for sleep, steps, resting heart rate and temperature, each chosen separately. Readings become one summary row per day on the phone (database v2, `wearable_days`); raw readings aren't kept and wearable data never leaves the phone. Four new patterns in Insights and on the Wearables screen: sleep before a period, resting heart rate across the cycle, short nights and pain, steps and mood. Demo mode has 90 days of synthetic watch data.
+- **Prediction research** (`src/engines/prediction.ts`, Prediction Lab): finds the post-ovulation temperature rise (three over six) in thermometer or wearable temperature, measures the person's luteal length, and compares three methods (standard, recent-weighted, temperature) by checking each against the person's own past cycles without looking ahead. Opt-in; adds a Lab line in My Cycle but never changes the standard estimate. Clear "never for contraception" wording.
+- **Clinician-reviewed content** (`src/content/`, My Care → Learn): 8 short guides in English and Bangla (period pain, when to see a doctor, heavy periods, irregular cycles, PCOS, endometriosis, PMS and PMDD, iron), each with its sources. A sign-off system ties each review to a hash of the exact text, and `npm run review:packet` produces the packet for a clinician. **No guide has been reviewed yet**; each says "Awaiting clinician review".
+- **Expanded accessibility**: in-app text size (up to +50% on top of the phone setting), high-contrast light and dark themes (all text 7:1 or better), larger touch areas (56 px), On/Off in words and ticks on selected chips in high contrast, screen reader announcements after actions.
+- **Opt-in research** (`src/engines/research.ts`, `server/src/research.ts`, Settings → More tools → Help research): adults only, never demo data, versioned consent, the exact summary shown before sending, randomised response on symptom flags, no dates, text or ids, a strict server schema, and per-contribution delete keys kept on the phone. Closed until a study address is built in (`EXPO_PUBLIC_RESEARCH_URL`).
+- **Database migrations**: a `MIGRATIONS` table and `migrationsFrom()` run on start inside a transaction.
+
 ## Partly finished
 
 - **Bangla**: some text the output guard inserts into cloud replies is English only. All Bangla copy should be reviewed by a native speaker.
 - **Notifications**: scheduling and wording are built; needs testing on real Android devices across manufacturers (battery optimisers often delay local notifications).
-- **Accessibility**: labels, roles, contrast and reduce-motion are done; a full TalkBack pass on a device and large-font layout checks are still needed.
+- **Accessibility**: labels, roles, contrast, reduce-motion, text size, high contrast and larger touch areas are done; a full TalkBack pass on a device is still needed.
+- **Wearables**: built against the `react-native-health-connect` API and tested with synthetic data; not yet run on a real phone with a real watch.
+- **Research**: the app, consent flow and server store are built and tested, but no study exists yet. A real study needs ethics approval, participant information, hosting and a data-access plan before `EXPO_PUBLIC_RESEARCH_URL` is set.
+- **Learn**: written from guidelines but awaiting clinician review, and the Bangla awaits native-speaker review.
 
-## Not started (Stage 2 and 3)
+## Not started
 
 - Saved voice notes (audio) in Mood Mirror. Voice-to-text is built.
 - Accounts, cloud sync and multi-device (would need end-to-end encryption to keep the privacy promise).
-- Wearables and Health Connect (sleep, steps, heart rate).
 - Partner/caregiver sharing, community, clinician portal.
 - Store listing: screenshots, privacy policy, Data Safety form.
-- Clinician-reviewed content (see [SAFETY.md](SAFETY.md)); verification of the Kaan Pete Roi number.
+- The clinician review itself (see [SAFETY.md](SAFETY.md)); verification of the Kaan Pete Roi number.
+- Reading period, ovulation-test and mucus data from other apps through Health Connect, and writing back to it.
 - Play Integrity checks at backend registration, and production hosting for `server/`.
-- Database migrations beyond version 1.
 - iOS build and testing.
 
 ## Known limitations
 
 - The web preview stores data unencrypted and logs a harmless React warning about touch props on the SVG body map. It is for previewing only.
 - Text safety screening is pattern-based and will miss some phrasings.
-- Predictions use the calendar method only (median cycle length); BBT and mucus are recorded but not yet used in estimates. Only a positive LH test adjusts the ovulation estimate.
+- The standard prediction uses the calendar method (median cycle length); only a positive LH test adjusts its ovulation estimate. Temperature is used only in the opt-in Prediction Lab, and mucus is recorded but not yet used.

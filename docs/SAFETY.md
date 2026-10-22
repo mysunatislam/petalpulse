@@ -54,6 +54,23 @@ The server's system prompt (`server/src/prompt.ts`) sets the same limits for the
 
 Insights need a minimum amount of data (two cycles, or ten paired days for correlations), are worded as "you logged X more often when Y", show "How did we find this?", and can be marked unhelpful or hidden. Mood is never attributed to hormones.
 
+## Learn library and clinician sign-off
+
+The eight Learn guides (`src/content/library.ts`) are written from named guidelines (NICE, ACOG, FIGO, the international PCOS guideline, RCOG, WHO), which are listed under each guide. **None has been reviewed by a clinician yet**, and every guide says "Awaiting clinician review".
+
+How sign-off works:
+
+1. Run `npm run review:packet`. It writes [review/REVIEW_PACKET.md](review/REVIEW_PACKET.md) with every guide in English and Bangla, its sources, a short hash of the exact text, and the safety messages.
+2. A qualified clinician reads it and, for each guide they approve as written, sends back the id, hash, their name, credential and the date.
+3. Add those to `REVIEWS` in `src/content/reviews.ts`. The guide then shows "Reviewed by …".
+4. If the text changes later, its hash no longer matches and the guide automatically goes back to "Updated since review, awaiting a fresh check".
+
+Never add a sign-off on someone's behalf.
+
+## Prediction Lab
+
+The Lab is off by default and never changes the standard estimate. Its warning says plainly that a temperature rise only shows ovulation has probably passed and that it must never be used to avoid or plan a pregnancy. Temperature thresholds (three readings above the highest of the previous six, the third at least 0.2 °C higher) and the default luteal length of 13 days should be part of clinician review.
+
 ## Clinician review checklist
 
 1. Every threshold in `assessPain` and the wording of each level.
@@ -63,3 +80,6 @@ Insights need a minimum amount of data (two cycles, or ten paired days for corre
 5. Meal "why" text and sources (`src/data/meals.ts`).
 6. Phase descriptions (`PHASE_COPY` in `cycle.ts`).
 7. The AI system prompt.
+8. The eight Learn guides in English and Bangla (review packet).
+9. Prediction Lab copy and thresholds (`src/engines/prediction.ts`).
+10. Wearable pattern wording (`src/engines/wearables.ts`), especially the resting heart rate explanation.

@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Pressable,
   PressableProps,
@@ -18,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
-import { useTheme } from '../theme/useTheme';
+import { useTarget, useTextScale, useTheme } from '../theme/useTheme';
 import { BANGLA_FONT, fonts, hasBangla, radius } from '../theme/tokens';
 import { useApp } from '../store/app';
 import { localize, localizeNode } from '../i18n';
@@ -31,6 +32,15 @@ export function tap(kind: 'light' | 'success' | 'select' = 'light') {
     else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   } catch {
     // haptics unavailable (web)
+  }
+}
+
+/** Tells a screen reader what just happened (e.g. "Saved"), in the app's language. */
+export function announce(message: string) {
+  try {
+    AccessibilityInfo.announceForAccessibility(localize(useApp.getState().settings.language, message));
+  } catch {
+    // no screen reader API (tests)
   }
 }
 
@@ -63,18 +73,21 @@ export function T({
   ...rest
 }: TextProps & { v?: Variant; muted?: boolean; soft?: boolean; color?: string; center?: boolean }) {
   const t = useTheme();
+  const scale = useTextScale();
   const lang = useApp((st) => st.settings.language);
   const children = localizeNode(lang, rest.children);
   const flat = StyleSheet.flatten([VARIANT[v], style]) ?? {};
+  const fontSize = (flat.fontSize ?? 15) * scale;
+  const sized = scale !== 1 ? { fontSize, lineHeight: flat.lineHeight ? flat.lineHeight * scale : undefined } : null;
   // Bengali script needs more vertical room for its vowel signs, and no letter-spacing or uppercase.
   const bangla = hasBangla(children)
-    ? { fontFamily: BANGLA_FONT[flat.fontFamily as string] ?? fonts.bn, lineHeight: Math.round((flat.fontSize ?? 15) * 1.6), letterSpacing: 0, textTransform: 'none' as const }
+    ? { fontFamily: BANGLA_FONT[flat.fontFamily as string] ?? fonts.bn, lineHeight: Math.round(fontSize * 1.6), letterSpacing: 0, textTransform: 'none' as const }
     : null;
   return (
     <Text
       maxFontSizeMultiplier={1.8}
       {...rest}
-      style={[VARIANT[v], { color: color ?? (muted ? t.textMuted : soft ? t.textSoft : t.text) }, center && { textAlign: 'center' }, style, bangla]}
+      style={[VARIANT[v], { color: color ?? (muted ? t.textMuted : soft ? t.textSoft : t.text) }, center && { textAlign: 'center' }, style, sized, bangla]}
     >
       {children}
     </Text>
@@ -189,6 +202,7 @@ export function Card({
     backgroundColor: tint ?? (glass ? t.surfaceGlass : t.surface),
     borderColor: t.border,
     shadowColor: t.shadow,
+    ...(t.hc && { borderWidth: 1.5 }),
   };
   if (onPress) {
     return (
@@ -264,6 +278,7 @@ export function Button({
   const bg =
     kind === 'primary' ? t.accent : kind === 'danger' ? t.danger : kind === 'soft' ? t.blush : kind === 'secondary' ? t.surface : 'transparent';
   const fg = kind === 'primary' ? t.accentText : kind === 'danger' ? '#fff' : t.text;
+  const minHeight = useTarget(small ? 42 : 54);
   return (
     <Pressable
       onPress={() => {
@@ -277,7 +292,7 @@ export function Button({
       style={({ pressed }) => [
         styles.btn,
         small && styles.btnSmall,
-        { backgroundColor: bg, borderColor: kind === 'secondary' || kind === 'ghost' ? t.border : 'transparent', opacity: disabled ? 0.45 : 1 },
+        { minHeight, backgroundColor: bg, borderColor: kind === 'secondary' || kind === 'ghost' || t.hc ? t.border : 'transparent', opacity: disabled ? 0.45 : 1 },
         pressed && { transform: [{ scale: 0.98 }] },
         style,
       ]}
@@ -296,6 +311,7 @@ export function Button({
 
 export function IconButton({ children, label, onPress, style }: { children: React.ReactNode; label: string; onPress: () => void; style?: StyleProp<ViewStyle> }) {
   const t = useTheme();
+  const size = useTarget(44);
   return (
     <Pressable
       accessibilityRole="button"
@@ -305,7 +321,7 @@ export function IconButton({ children, label, onPress, style }: { children: Reac
         onPress();
       }}
       hitSlop={8}
-      style={({ pressed }) => [styles.iconBtn, { backgroundColor: t.surfaceGlass, borderColor: t.border }, pressed && { opacity: 0.7 }, style]}
+      style={({ pressed }) => [styles.iconBtn, { width: size, height: size, borderRadius: size / 2, backgroundColor: t.surfaceGlass, borderColor: t.border }, pressed && { opacity: 0.7 }, style]}
     >
       {children}
     </Pressable>
@@ -328,6 +344,7 @@ export function Chip({
   style?: StyleProp<ViewStyle>;
 }) {
   const t = useTheme();
+  const minHeight = useTarget(40);
   return (
     <Pressable
       onPress={() => {
@@ -340,14 +357,17 @@ export function Chip({
       style={({ pressed }) => [
         styles.chip,
         {
+          minHeight,
           backgroundColor: selected ? color ?? t.accent : t.surfaceGlass,
-          borderColor: selected ? 'transparent' : t.border,
+          borderColor: selected ? (t.hc ? t.text : 'transparent') : t.border,
+          ...(t.hc && { borderWidth: selected ? 2 : 1.5 }),
         },
         pressed && { opacity: 0.8 },
         style,
       ]}
     >
       <T maxFontSizeMultiplier={1.6} style={VARIANT.label} color={selected ? (color ? t.text : t.accentText) : t.text}>
+        {selected && t.hc && !icon ? '✓ ' : ''}
         {icon ? `${icon} ` : ''}
         {label}
       </T>
@@ -392,8 +412,9 @@ export function ChipGroup<V extends string>({
 
 export function Segmented<V extends string>({ options, value, onChange }: { options: { value: V; label: string }[]; value: V; onChange: (v: V) => void }) {
   const t = useTheme();
+  const minHeight = useTarget(38);
   return (
-    <View style={[styles.segment, { backgroundColor: t.surfaceGlass, borderColor: t.border }]} accessibilityRole="tablist">
+    <View style={[styles.segment, { backgroundColor: t.surfaceGlass, borderColor: t.border }, t.hc && { borderWidth: 1.5 }]} accessibilityRole="tablist">
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -405,7 +426,7 @@ export function Segmented<V extends string>({ options, value, onChange }: { opti
               tap('select');
               onChange(o.value);
             }}
-            style={[styles.segItem, on && { backgroundColor: t.accent }]}
+            style={[styles.segItem, { minHeight }, on && { backgroundColor: t.accent }]}
           >
             <T maxFontSizeMultiplier={1.5} style={[VARIANT.label, { textAlign: 'center' }]} color={on ? t.accentText : t.textMuted}>
               {o.label}
@@ -439,8 +460,13 @@ export function Toggle({ label, detail, value, onChange }: { label: string; deta
           </T>
         ) : null}
       </View>
+      {t.hc ? (
+        <T v="label" style={{ marginRight: 8 }}>
+          {value ? 'On' : 'Off'}
+        </T>
+      ) : null}
       <View style={[styles.track, { backgroundColor: value ? t.primary : t.border }]}>
-        <View style={[styles.thumb, { transform: [{ translateX: value ? 20 : 0 }], backgroundColor: '#fff' }]} />
+        <View style={[styles.thumb, { transform: [{ translateX: value ? 20 : 0 }], backgroundColor: t.hc && t.dark ? '#000' : '#fff' }]} />
       </View>
     </Pressable>
   );

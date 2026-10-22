@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
-import { createTableSQL, fromRow, SCHEMA_VERSION, TABLES, TableName, toRow } from './schema';
+import { createTableSQL, fromRow, migrationsFrom, SCHEMA_VERSION, TABLES, TableName, toRow } from './schema';
 import type { StorageBackend } from './storage';
 
 const DB_NAME = 'petal-pulse.db';
@@ -30,6 +30,12 @@ export class SQLiteBackend implements StorageBackend {
     await db.execAsync(`PRAGMA key = "x'${key}'";`);
     await db.execAsync('PRAGMA journal_mode = WAL;');
     for (const t of Object.values(TABLES)) await db.execAsync(createTableSQL(t));
+    const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM kv WHERE key = ?', 'schema_version');
+    const from = row ? Number(JSON.parse(row.value)) : SCHEMA_VERSION;
+    const steps = migrationsFrom(from);
+    if (steps.length) await db.withTransactionAsync(async () => {
+      for (const sql of steps) await db.execAsync(sql);
+    });
     await db.runAsync('INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)', 'schema_version', JSON.stringify(SCHEMA_VERSION));
     this.db = db;
   }

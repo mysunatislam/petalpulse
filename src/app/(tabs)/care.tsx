@@ -105,6 +105,13 @@ export default function Care() {
         </T>
       </Card>
       <Gap h={10} />
+      <Card onPress={() => router.push('/learn')} accessibilityLabel="Learn. Short guides with sources">
+        <T v="h3">Learn</T>
+        <T v="small" muted>
+          Short guides on pain, bleeding, cycles, PCOS, endometriosis, PMS and iron, with their sources.
+        </T>
+      </Card>
+      <Gap h={10} />
       <Card onPress={() => router.push('/export')}>
         <T v="h3">Health summary for your clinician</T>
         <T v="small" muted>

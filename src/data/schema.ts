@@ -11,7 +11,25 @@ export interface TableDef {
   indexes?: string[];
 }
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+/**
+ * Steps that bring an older database up to SCHEMA_VERSION. New tables are
+ * created by createTableSQL on every start, so steps are only needed for
+ * changes to existing tables (new columns, renames, data fixes).
+ * Key = the version the step upgrades to.
+ */
+export const MIGRATIONS: Record<number, string[]> = {
+  // v2 adds the wearable_days table (created automatically) and no column changes.
+  2: [],
+};
+
+/** The migration statements to run, in order, for a database at `from`. */
+export function migrationsFrom(from: number): string[] {
+  const out: string[] = [];
+  for (let v = from + 1; v <= SCHEMA_VERSION; v++) out.push(...(MIGRATIONS[v] ?? []));
+  return out;
+}
 
 export const TABLES = {
   kv: {
@@ -91,6 +109,11 @@ export const TABLES = {
     name: 'favorites',
     key: 'id',
     columns: { id: 'text', createdAt: 'text' },
+  },
+  wearable_days: {
+    name: 'wearable_days',
+    key: 'date',
+    columns: { date: 'text', sleepMinutes: 'integer', steps: 'integer', restingHr: 'real', tempDelta: 'real', bbt: 'real', source: 'text' },
   },
 } satisfies Record<string, TableDef>;
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Petal & Pulse",
     "slug": "petal-and-pulse",
-    "version": "0.1.0",
+    "version": "0.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -25,7 +25,12 @@
       "permissions": [
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_SKIN_TEMPERATURE",
+        "android.permission.health.READ_BASAL_BODY_TEMPERATURE"
       ],
       "blockedPermissions": [
         "android.permission.ACCESS_FINE_LOCATION",
@@ -76,6 +81,17 @@
         {
           "microphonePermission": "Petal & Pulse uses the microphone only while you hold the mic button, to turn your words into text.",
           "speechRecognitionPermission": "Your speech is turned into text so you can talk instead of type. Nothing is recorded or saved as audio."
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
+          }
         }
       ]
     ],

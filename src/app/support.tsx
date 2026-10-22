@@ -14,7 +14,7 @@ const APPOINTMENT = [
   'Period pain that stops you doing everyday things',
   'Pain that is getting worse over time',
   'Periods that suddenly change, or bleeding between periods or after sex',
-  'Cycles often shorter than 21 days or longer than 35 days',
+  'Cycles often shorter than 24 days or longer than 38 days',
   'Feeling very low, anxious or irritable before periods in a way that affects your life',
 ];
 

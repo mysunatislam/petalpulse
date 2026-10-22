@@ -3,7 +3,7 @@
  * demo data everywhere it appears. Not real people, not medical validation.
  */
 import { addDays, ISODate } from '../lib/dates';
-import type { DayLog, Flow, Mood, MoodEntry, MoodTag, PainEpisode, PeriodDay, Profile } from './types';
+import type { DayLog, Flow, Mood, MoodEntry, MoodTag, PainEpisode, PeriodDay, Profile, WearableDay } from './types';
 import { DEFAULT_PROFILE, EMPTY_DAY_LOG } from './types';
 
 function rng(seed: number) {
@@ -20,6 +20,7 @@ export interface DemoData {
   dayLogs: DayLog[];
   moods: MoodEntry[];
   pain: PainEpisode[];
+  wearables: WearableDay[];
 }
 
 export const DEMO_NAME = 'Mira';
@@ -150,5 +151,41 @@ export function generateDemo(today: ISODate): DemoData {
     onboardedAt: new Date().toISOString(),
     isDemo: true,
   };
-  return { profile, periodDays, dayLogs, moods, pain };
+  return { profile, periodDays, dayLogs, moods, pain, wearables: demoWearables(today, starts, dayLogs, moods) };
+}
+
+/**
+ * About 90 days of synthetic watch data, as if Health Connect was connected
+ * three months ago. Its own random stream keeps the rest of the demo unchanged.
+ * Resting heart rate and night temperature rise after a calendar-estimated
+ * ovulation, as they commonly do, so the Prediction Lab has something to find.
+ */
+function demoWearables(today: ISODate, starts: ISODate[], dayLogs: DayLog[], moods: MoodEntry[]): WearableDay[] {
+  const r = rng(90210);
+  const sleepBy = new Map(dayLogs.map((l) => [l.date, l.sleepHours]));
+  const hard = new Set(moods.filter((m) => ['irritated', 'anxious', 'sad', 'exhausted', 'overwhelmed'].includes(m.mood)).map((m) => m.date));
+  const out: WearableDay[] = [];
+  for (let d = addDays(today, -90); d < today; d = addDays(d, 1)) {
+    let i = 0;
+    while (i + 1 < starts.length && d >= starts[i + 1]) i++;
+    const next = starts[i + 1];
+    const daysBefore = next ? Math.round((Date.parse(next) - Date.parse(d)) / 86400000) : 99;
+    const cd = Math.round((Date.parse(d) - Date.parse(starts[i])) / 86400000) + 1;
+    const afterOvulation = daysBefore >= 1 && daysBefore <= 13;
+    const sleepH = sleepBy.get(d) ?? 7 + (r() - 0.5);
+    let steps = 6500 + (r() - 0.5) * 4000;
+    // Harder days are often quieter ones, but not always, and quiet days aren't always hard.
+    if (hard.has(d) ? r() < 0.6 : r() < 0.15) steps -= 2500 + r() * 2000;
+    if (cd <= 2) steps -= 2500;
+    out.push({
+      date: d,
+      sleepMinutes: Math.round(sleepH * 60 + (r() - 0.5) * 30),
+      steps: Math.max(600, Math.round(steps)),
+      restingHr: Math.round((61 + (afterOvulation ? 2.6 : 0) + (r() - 0.5) * 1.6) * 10) / 10,
+      tempDelta: Math.round(((afterOvulation ? 0.32 : -0.08) + (r() - 0.5) * 0.12) * 100) / 100,
+      bbt: null,
+      source: 'demo',
+    });
+  }
+  return out;
 }
